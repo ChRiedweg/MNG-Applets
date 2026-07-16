@@ -1217,9 +1217,13 @@ function KistenView({
   H,
   grouping
 }) {
+  // Höhe (rows) ist in BEIDEN Gruppierungen bewusst dieselbe Grösse b — b steckt
+  // in (a·b) genauso wie in (b·c), also lässt sich damit dieselbe Kisten-Höhe für
+  // beide Panels erzwingen. So macht die gleiche Höhe direkt sichtbar, dass beide
+  // Seiten dieselbe Gesamtmenge sind, statt es nur behaupten zu müssen.
   const groups = grouping === "abc" ? c : a;
-  const rows = grouping === "abc" ? a : b;
-  const cols = grouping === "abc" ? b : c;
+  const rows = b;
+  const cols = grouping === "abc" ? a : c;
   const crateColor = grouping === "abc" ? COLOR_B : COLOR_A;
   const blockGap = 14;
   const totalCols = groups * cols;
@@ -1587,7 +1591,7 @@ function Distributiv({
     fill: COLOR_B
   }, b), "+", /*#__PURE__*/React.createElement("tspan", {
     fill: COLOR_A
-  }, c), ") = ", a, "·(", /*#__PURE__*/React.createElement("tspan", {
+  }, c), ") → ", a, "·(", /*#__PURE__*/React.createElement("tspan", {
     fill: COLOR_B
   }, b), "+", /*#__PURE__*/React.createElement("tspan", {
     fill: COLOR_A
@@ -1595,7 +1599,7 @@ function Distributiv({
     fill: COLOR_B
   }, b), "+", /*#__PURE__*/React.createElement("tspan", {
     fill: COLOR_A
-  }, c), ") = ", a, "·(", /*#__PURE__*/React.createElement("tspan", {
+  }, c), ") → ", a, "·(", /*#__PURE__*/React.createElement("tspan", {
     fill: COLOR_B
   }, b), "+", /*#__PURE__*/React.createElement("tspan", {
     fill: COLOR_A
