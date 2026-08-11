@@ -595,6 +595,7 @@ function Rechengesetze() {
     setC(key === "assoziativ" ? 4 : 2);
   }
   const showOperationToggle = law === "kommutativ" || law === "assoziativ";
+  const flaecheLabel = operation === "addition" && law !== "distributiv" ? "Länge" : law === "assoziativ" && operation === "multiplikation" ? "Volumen" : "Fläche";
   return /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
@@ -680,7 +681,7 @@ function Rechengesetze() {
     label: "Punkte"
   }, {
     key: "flaeche",
-    label: "Fläche"
+    label: flaecheLabel
   }].map(m => /*#__PURE__*/React.createElement("button", {
     key: m.key,
     onClick: () => setMode(m.key),
