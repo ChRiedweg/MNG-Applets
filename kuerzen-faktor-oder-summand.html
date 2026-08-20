@@ -313,7 +313,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
 </script>
 </head>
 <body>
-<div id="preview-banner">Lokale Vorschau von <code>kuerzen-faktor-oder-summand</code> &middot; self-contained, kein Internetzugriff n&ouml;tig &middot; erzeugt von build_preview.sh (nicht versioniert)</div>
+
 <div id="app-mount-wrap">
 <div id="app-kuerzen-faktor-oder-summand"><span>L&auml;dt Applet&hellip;</span></div>
 </div>
@@ -748,7 +748,7 @@ function KuerzenFaktorOderSummand() {
     WebkitTapHighlightColor: "transparent",
     touchAction: "manipulation"
   };
-  const prompt = !factored ? "Tippe an, was du wegstreichen würdest. Achtung: Gleich aussehende Teile sind nicht automatisch kürzbar." : removed.size === 0 ? "Faktorisiert. Welcher Faktor steht im Zähler UND im Nenner? Tippe ihn an." : "Weiter erkunden: Was lässt sich noch kürzen – und was ist ein Summand?";
+  const prompt = !factored ? "Tippe an, was du wegstreichen würdest — oder faktorisiere zuerst (grüner Button unten). Achtung: Gleich aussehende Teile sind nicht automatisch kürzbar." : removed.size === 0 ? "Faktorisiert. Welcher Faktor steht im Zähler UND im Nenner? Tippe ihn an." : "Weiter erkunden: Was lässt sich noch kürzen – und was ist ein Summand?";
   const fbColor = feedback?.tone === "green" ? GREEN : feedback?.tone === "amber" ? AMBER : feedback?.tone === "red" ? RED : MUTE;
   return /*#__PURE__*/React.createElement("div", {
     style: {
