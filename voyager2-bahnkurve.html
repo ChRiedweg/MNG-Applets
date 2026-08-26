@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voyager 2 — Bahnkurve und Swing-by</title>
+<style>
+  :root{ color-scheme: light dark; }
+  body{font-family:system-ui,-apple-system,sans-serif;max-width:44rem;margin:0 auto;padding:1rem 1rem 3rem;line-height:1.55}
+  h1{font-size:1.35rem;line-height:1.25;margin:.6rem 0 .2rem}
+  p.lead{margin:.2rem 0 1rem;color:#555}
+  @media (prefers-color-scheme: dark){ p.lead{color:#aaa} }
+  figure{margin:0}
+  img{width:100%;height:auto;max-width:560px;display:block;margin:0 auto;border-radius:6px;background:#000}
+  .steuerung{display:flex;gap:.5rem;justify-content:center;margin:.7rem 0 1rem;flex-wrap:wrap}
+  button{font:inherit;padding:.55rem 1.1rem;border-radius:8px;border:1px solid #8884;background:#8881;cursor:pointer}
+  button:active{background:#8883}
+  .frage{border-left:4px solid #2b6cb0;padding:.6rem .9rem;margin:1.2rem 0;background:#2b6cb010;border-radius:0 6px 6px 0}
+  .frage b{display:block;margin-bottom:.25rem}
+  footer{margin-top:2rem;font-size:.8rem;color:#666;border-top:1px solid #8883;padding-top:.7rem}
+  footer a{color:inherit}
+  @media (prefers-color-scheme: dark){ footer{color:#999} }
+</style>
+</head><body>
+
+<h1>Voyager 2 — Bahnkurve und Swing-by</h1>
+<p class="lead">Der Weg der Raumsonde vom Start am 20. August 1977 bis Ende 2000, vorbei an Jupiter, Saturn, Uranus und Neptun.</p>
+
+<figure>
+  <img id="ani" src="voyager2-bahnkurve.gif" alt="Animation der Bahnkurve von Voyager 2 durch das Sonnensystem">
+</figure>
+
+<div class="steuerung">
+  <button id="btn" type="button">Anhalten</button>
+  <button id="neu" type="button">Von vorn</button>
+</div>
+
+<div class="frage">
+  <b>Schau genau hin</b>
+  Wie ändert sich die Geschwindigkeit der Sonde bei jedem Vorbeiflug an einem Planeten — und in welche Richtung wird sie abgelenkt? Genau diese Änderung ist der Vektor <span style="white-space:nowrap">Δ<i>v</i></span> aus dem Skript.
+</div>
+
+<footer>
+  Animation: <a href="https://commons.wikimedia.org/wiki/File:Animation_of_Voyager_2_trajectory.gif">Animation of Voyager 2 trajectory</a>
+  von Phoenix7777, Wikimedia Commons, Lizenz
+  <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.de">CC BY-SA 4.0</a> —
+  unverändert übernommen. Diese Seite steht unter derselben Lizenz.
+</footer>
+
+<script>
+// Ein GIF laesst sich nicht direkt pausieren: Zum Anhalten zeichnen wir den
+// aktuell sichtbaren Frame in ein Canvas und zeigen dieses Standbild an.
+(function () {
+  var img = document.getElementById('ani');
+  var btn = document.getElementById('btn');
+  var neu = document.getElementById('neu');
+  var quelle = img.getAttribute('src');
+  var laeuft = true;
+
+  btn.addEventListener('click', function () {
+    if (laeuft) {
+      var c = document.createElement('canvas');
+      c.width = img.naturalWidth || img.width;
+      c.height = img.naturalHeight || img.height;
+      try {
+        c.getContext('2d').drawImage(img, 0, 0);
+        img.src = c.toDataURL('image/png');
+      } catch (e) { return; }   // Standbild nicht moeglich: Animation laeuft weiter
+      btn.textContent = 'Weiter';
+      laeuft = false;
+    } else {
+      img.src = quelle;
+      btn.textContent = 'Anhalten';
+      laeuft = true;
+    }
+  });
+
+  neu.addEventListener('click', function () {
+    img.src = quelle + '?t=' + (img.dataset.n = (+(img.dataset.n || 0) + 1));
+    btn.textContent = 'Anhalten';
+    laeuft = true;
+  });
+})();
+</script>
+</body></html>
