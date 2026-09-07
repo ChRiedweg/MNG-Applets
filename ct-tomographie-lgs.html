@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Homogene und inhomogene Lösungsgerade</title>
+<title>Computertomographie als LGS</title>
 <style>
   html, body { margin: 0; padding: 0; font-family: -apple-system, system-ui, sans-serif; background: #F7F8FA; }
   #app-mount-wrap { padding: 12px; }
@@ -313,7 +313,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
 </head>
 <body>
 <div id="app-mount-wrap">
-<div id="app-lgs-loesungsstruktur"><span>L&auml;dt Applet&hellip;</span></div>
+<div id="app-ct-tomographie-lgs"><span>L&auml;dt Applet&hellip;</span></div>
 </div>
 <script>
 (function () {
@@ -327,254 +327,420 @@ const {
 } = React;
 
 // =============================================================================
-//  Lösungsstruktur von LGS: inhomogen = spezielle Lösung + homogene Lösung
-//  (Kapitel "LGS -- Lineare Gleichungssysteme", Klasse 2g)
+//  Computertomographie als lineares Gleichungssystem
+//  (Kapitel "Lineare Gleichungssysteme", Dossier Lineare Algebra, Klasse 3f)
 //
-//  Konkretes 2x2-Beispiel (Geometrie wie im Beispiel "Inhomogenes LGS" in
-//  T_LGS_2026.tex, aber als System in genau den beiden Variablen x und y, die
-//  auch gezeichnet werden -- so gehört Grafik und LGS wirklich zusammen):
-//    inhomogen:   x + 3y = 1,  2x + 6y = 2  ->  L         = {(1-3t, t) | t in R}
-//    homogen:     x + 3y = 0,  2x + 6y = 0  ->  L_homogen = {(-3t,  t) | t in R}
-//  Die zweite Gleichung ist jeweils das Doppelte der ersten -- deshalb bleibt
-//  eine Variable frei und die Lösungsmenge ist eine ganze Gerade. Es geht hier
-//  nicht ums Rechnen, sondern um die Struktur der Lösungsmenge.
+//  IDEE (Herkunft: ETH-Leitprogramm "Lineare Gleichungssysteme", Kapitel 5
+//  "Die Computertomographie"; cr hat das Beispiel in frueheren LGS-Sequenzen
+//  nach M. Bettinaglio verwendet):
+//    Ein Schaedelquerschnitt wird zu einem 3x3-Raster vergroebert. Jede Zelle
+//    besteht aus EINER Gewebeart und schwaecht einen durchgehenden Roentgen-
+//    strahl um einen festen Betrag (ihre "Undurchlaessigkeit"). Man schickt
+//    Strahlen der Intensitaet 100 durch und misst, was hinten ankommt. Aus
+//    neun solchen Messungen entsteht ein 9x9-LGS; seine Loesung ist genau die
+//    Undurchlaessigkeit jeder einzelnen Zelle -- also das Bild.
 //
-//  EIN Regler (t) ist der ganze Punkt: er bewegt gleichzeitig einen Punkt auf der
-//  homogenen Geraden (durch den Ursprung) und den zugehörigen Punkt auf der
-//  inhomogenen Geraden. Die Einsicht entsteht nicht durch mehr Regler, sondern
-//  dadurch, dass man sieht: der Verbindungsvektor zwischen beiden Punkten ist
-//  IMMER derselbe -- nämlich der Ortsvektor der speziellen Lösung P_0.
+//  DIE NEUN STRAHLEN (cr-Entscheid 2026-09-03, Frage 1):
+//    Vier Messrichtungen, jeder Strahl eine ECHTE Gerade durchs Raster, damit
+//    er auch gezeichnet werden kann:
+//      0 Grad    Z1,Z2,Z3   die drei Zeilen
+//      90 Grad   S1,S2      zwei der drei Spalten
+//      135 Grad  D0,D1      fallende Diagonale (im Bild von links oben nach
+//                           rechts unten) und die kurze parallel darunter
+//      45 Grad   A1,A2      A1 = die kurze [1,3], A2 = die lange [2,4,6]
+//    det(M) = -12, also Rang 9 und genau eine Loesung.
 //
-//  Sprachliche Genauigkeit (cr, 2026-09-03): Lösungen sind PUNKTE und werden als
-//  Punkte gezeichnet; addiert wird ausschliesslich zwischen VEKTOREN. Deshalb
-//  überall P_0, P_h, P für Punkte und Vektorpfeil-Notation für die Summe
-//  (Hausnotation wie in cr's Material: Pfeil über dem Punktnamen = Ortsvektor).
-//  Koordinaten werden mit Komma getrennt, Dezimalzahlen mit Punkt
-//  (SKRIPT_KONVENTIONEN.md) -- daher das Leerzeichen nach dem Komma.
+//    WINKEL: Die Angabe meint die Lage der GERADEN (mod 180 Grad) in der
+//    ueblichen Lage
+//    (x nach rechts, y nach OBEN) -- eine im Bild fallende Gerade hat also
+//    135 Grad, nicht 45. Im SVG zeigt dir[1] nach unten; die Umrechnung steckt
+//    ausschliesslich in den Labels der RAYS-Tabelle. Im sichtbaren Text steht
+//    deshalb "Gerade 45 Grad", nicht "Richtung 45 Grad" -- der gezeichnete
+//    Pfeil zeigt den Durchlauf des Strahls und weicht davon bei sechs der
+//    neun Strahlen um 180 Grad ab, was ohne das Wort "Gerade" wie ein
+//    Widerspruch aussieht (Review-Befund der zweiten Runde).
+//    (Erste Fassung hatte 45
+//    und 135 vertauscht -- gefunden im T3-Review vom 2026-09-03. Eine 3f hat
+//    parallel Vektorgeometrie und liest die Zeichnung als gewoehnliche Ebene.)
 //
-//  Ueberarbeitung 2026-09-03 (zwei cr-Wuensche, beide abgesprochen):
-//  (1) DIE BEIDEN ZWEISPALTER BLEIBEN AUF JEDER BREITE ZWEISPALTIG.
-//      Der Vergleich inhomogen/homogen IST die Aussage dieses Applets --
-//      untereinander gestapelt hat man am Handy nie beides zugleich im Blick.
-//      Die frueher greifende @media-Stapelung unter 430px ist ersatzlos weg.
-//      Stattdessen skalieren Schriftgroessen, Innenabstaende, Luecken und
-//      Klammern per clamp() mit der Viewportbreite: bei ~430px und darueber
-//      stehen alle Werte am oberen Anschlag (Desktop-Eindruck unveraendert),
-//      nach unten schrumpfen sie so weit, dass zwei Spalten auch bei 320px
-//      nebeneinander lesbar bleiben. Seitliches Scrollen ist KEINE Loesung
-//      (von cr ausdruecklich verworfen) und kommt nirgends vor.
-//      Rechnung fuer 320px: 320 minus 2*12 Aussenabstand dieser Komponente
-//      minus 2*12 Polsterung der Wrapper-Seite (#root bzw. #app-mount-wrap)
-//      = 272; abzueglich Spaltenluecke 1.8vw = 5.8 bleiben ~133 pro Spalte,
-//      abzueglich 2*2.2vw = 14 Kartenpolsterung bleiben ~120px nutzbare
-//      Inhaltsbreite. Alle Zeilen unten sind auf dieses Budget hin gesetzt;
-//      die breiteste (inhomogene Loesungsmenge) misst dort gemessen ~110px.
-//  (2) STEHENDE SPALTENVEKTOREN, WO ADDIERT ODER GESTRECKT WIRD.
-//      Komponenten untereinander in runden Klammern (ColVec + VecParen);
-//      die Klammern sind SVG-Pfade mit preserveAspectRatio="none" und
-//      vectorEffect="non-scaling-stroke", damit sie auf jeder Inhaltshoehe
-//      sauber sitzen und die Strichstaerke dabei konstant bleibt -- Verfahren
-//      unveraendert uebernommen aus normalgleichungen-beste-loesung.jsx.
-//      Betroffen sind: die beiden Loesungsmengen (jetzt in Vektorform,
-//      Aufpunkt + t mal Richtungsvektor, statt die Streckung unsichtbar in den
-//      Koordinaten zu verstecken) und die beiden Ergebnis-Kacheln.
-//      NICHT betroffen sind blosse Ortsangaben: der Punkt P(-0.5, 0.5) unten
-//      in der Kachel bleibt ein Paar -- dort wird nichts addiert oder
-//      gestreckt, dort wird nur ein Ort genannt. Symbolische Stellen
-//      (Checkbox-Label, Prinzip-Kasten, Grafikbeschriftung) tragen weiterhin
-//      Vektorpfeile statt Komponenten; auch das sind "Vektoren" im Sinne des
-//      Wunsches, nur eben ohne Zahlen.
+//  WARUM NICHT EINFACH 3 ZEILEN + 3 SPALTEN + 3 DIAGONALEN? Das kann nicht
+//  funktionieren, und zwar aus einem Grund, der es wert ist, hier zu stehen:
+//  Zeilensummen und Spaltensummen ergeben BEIDE die Gesamtsumme aller neun
+//  Zellen. Die sechs achsenparallelen Strahlen haben deshalb zusammen nur
+//  Rang 5, nicht 6; mit drei weiteren Gleichungen kommt man hoechstens auf
+//  Rang 8 < 9. Hoechstens FUENF der sechs Zeilen/Spalten duerfen vorkommen --
+//  deshalb fehlt die Spalte S3. (Vollstaendig durchgerechnet: von allen
+//  C(16,9) = 11440 Kombinationen aus Zeilen, Spalten und Diagonalen sind 7376
+//  regulaer, aber keine einzige davon enthaelt alle sechs Zeilen und Spalten.)
+//  Das ist die schoenste Mathematik des Beispiels -- sie steht bewusst nur
+//  hier und wird von cr muendlich eingebracht (s. o.).
+//
+//  KEIN ERKLAERTEXT UNTER DEM GLEICHUNGSSYSTEM (cr, 2026-09-04). Es standen
+//  dort drei Absaetze -- Lesehilfe zur rechten Seite, die Rang-Begruendung fuer
+//  die fehlende Spalte S3, und der Idealisierungs-Hinweis unten. cr hat sie
+//  ersatzlos gestrichen: "schlank hier, Theorie woanders, und Erklaerungen
+//  muendlich." Das Applet ist Anschauungsmaterial fuer den Unterricht, nicht
+//  ein Lehrtext, der fuer sich allein stehen muss. Ein Review, das diese
+//  Erklaerungen vermisst, hat damit KEINEN Befund -- der Entscheid ist
+//  gefallen und gilt fuer alle drei Absaetze.
+//
+//  MODELL-IDEALISIERUNG (bewusst NICHT im Applet, s. o. -- hier festgehalten,
+//  weil sie fachlich gilt und cr sie muendlich einbringt):
+//   (a) Die Abschwaechung wird ADDITIV gerechnet. Physikalisch ist sie
+//       multiplikativ (Beer-Lambert) und wird erst durch Logarithmieren
+//       additiv.
+//   (b) Jede durchquerte Zelle zaehlt gleich stark, obwohl ein Diagonalstrahl
+//       eine um den Faktor sqrt(2) laengere Strecke in ihr zuruecklegt.
+//  Beides ist die Vereinfachung des ETH-Leitprogramms und cr's frueherer
+//  Sequenzen.
+//
+//  VIER FESTGELEGTE PUNKTE (cr, 2026-09-03):
+//   * DREI GEWEBESTUFEN, Werte 0 / 3 / 6 (Frage 2). Antippen einer Zelle
+//     zykliert 0 -> 3 -> 6 -> 0.
+//   * RECHTE SEITE = ABSCHWAECHUNG (Frage 3), also x1+x2+x3 = 9 und nicht
+//     100-(x1+x2+x3) = 91. So steht das System sofort in Standardform; der
+//     Messwert 91 steht beim Strahl, nicht in der Gleichung.
+//   * LGS IN STANDARDFORM MIT AUSGERICHTETEN SPALTEN (Frage 4), nicht als
+//     erweiterte Koeffizientenmatrix. Antippen einer Gleichung zeichnet den
+//     zugehoerigen Strahl ins Raster.
+//   * NUR LOESUNGSVEKTOR + BILD (Frage 5), kein Gauss-Rechenweg -- den zeigt
+//     bereits das Applet gauss-algorithmus-film.
+//   * REKONSTRUKTION IN GRAUSTUFEN (Frage 6), damit sie wie ein CT-Schnitt
+//     aussieht und nicht wie eine blosse Kopie des Eingaberasters.
+//
+//  LAYOUT (cr, 2026-09-03): Tablet im Querformat ist das Zielgeraet. Oben
+//  links das Raster, oben rechts das LGS; nach dem Aufklappen unten links die
+//  Loesung, unten rechts das rekonstruierte Bild. Unterhalb von 660px
+//  Komponentenbreite stapeln die Spalten untereinander, und dort
+//  kommt das CT-Bild VOR den Loesungsvektor -- sonst liegen Eingaberaster und
+//  Rekonstruktion rund 1400px auseinander und die Pointe ist nicht mehr in
+//  einem Blick pruefbar. Die Umschaltbreite wird per ResizeObserver an der
+//  KOMPONENTE gemessen, nicht per @media am Viewport -- in der Galerie steckt
+//  das Applet in einem iframe, dessen Breite mit der Fensterbreite nichts zu
+//  tun hat.
+//
+//  SO WIRD DER STRAHL GEZEICHNET (dritte Fassung; die beiden ersten sind
+//  jeweils an einem Review gescheitert und stehen hier als Warnung):
+//   * JETZT: "Scheinwerfer". Die NICHT getroffenen Zellen bekommen einen
+//     hellen Schleier und eine einheitlich dunkle Beschriftung, die
+//     getroffenen behalten ihre volle Gewebefarbe und einen kraeftigen
+//     Rahmen. Die Linie ist AUSSERHALB des Rasters deckend (dort stehen die
+//     Intensitaeten und die Pfeilspitze) und INNERHALB zurueckgenommen
+//     (2.5 statt 3 px, opacity 0.42): sie zeigt nur noch den Verlauf, die
+//     Zugehoerigkeit tragen Schleier, Rahmen und Pfeil. Dass sie damit auf
+//     dem dunkelblauen Hohlraum nur rund 1.1:1 Helligkeitskontrast hat, ist
+//     hier KEIN Mangel, sondern der Zweck: sie soll dort zuruecktreten, und
+//     sie traegt ueber den Farbton (uebersteht die Deuteranopie-Simulation).
+//     Beim Band war derselbe Wert ein Ausschlussgrund, weil das Band die
+//     Zugehoerigkeit ALLEIN anzeigen sollte -- es gab damals weder Schleier
+//     noch kraeftigen Rahmen.
+//   * ZWEITE FASSUNG, verworfen: ein "Band" (dicke Linie mit geringer
+//     Deckkraft, per clipPath auf die getroffenen Zellen begrenzt). Es
+//     zerschnitt achsenparallel jede Zelle in drei Streifen und brach an den
+//     Diagonalen an den Zellecken sichtbar auseinander; auf dem dunkelblauen
+//     Hohlraum blieb davon nichts uebrig (Kontrast 1.09:1) -- und es war das
+//     einzige Mittel, das die Zugehoerigkeit anzeigte.
+//   * ERSTE FASSUNG, verworfen: eine durchgehend deckende Linie mit weissem
+//     Saum, dazu eine Ziffernkontur in Zellfarbe. Die Kontur schnitt Loecher
+//     in die Linie, und durch die Punze der "6" blitzte ein oranger Fleck.
+//   Die Lehre aus allen dreien: eine deckende Linie durch die Zellmitte und
+//   eine grosse Ziffer an derselben Stelle vertragen sich nicht. Entweder
+//   weicht die Linie zurueck (jetzt) oder die Ziffer weicht aus.
+//
+//  KEIN marker-end IN SVG: Pfeilspitzen sind als explizite <polygon>
+//  gezeichnet. Grund: marker-end blieb in Firefox unsichtbar (Befund vom
+//  2026-09-03, 18 Pfeilspitzen in der LGS-Lernstrecke), cr liest in Firefox.
+//  Im Review bestaetigt: Chromium und Firefox rendern dieses Applet
+//  pixelgleich (mittlere Abweichung 3.7/255, reines Antialiasing).
+//
+//  ANREDE: "Sie" -- Klasse 3f ist eine 3. Klasse im f-Zug
+//  (SKRIPT_KONVENTIONEN.md, Regel zur Anrede). Das benachbarte Applet
+//  lgs-loesungsstruktur duzt, weil es fuer die 2g gebaut wurde.
+//
+//  EXAKTE ARITHMETIK: Das LGS wird mit Bruchrechnung geloest, nicht mit
+//  Gleitkommazahlen. Im Review exhaustiv geprueft: ueber alle 3^9 = 19683
+//  moeglichen Eingaben liefert solveExact immer exakt den Eingabevektor und
+//  immer Nenner 1; groesster Zwischenzaehler 72, groesster Zwischennenner 2.
 // =============================================================================
 
-const D = {
-  x: -3,
-  y: 1
-}; // Richtungsvektor d der homogenen Lösung
-const P0 = {
-  x: 1,
-  y: 0
-}; // spezielle Lösung P_0 des inhomogenen LGS (Punkt bei t=0)
-
-function homogPoint(t) {
-  return {
-    x: D.x * t,
-    y: D.y * t
-  };
-}
-function inhomogPoint(t) {
-  return {
-    x: P0.x + D.x * t,
-    y: P0.y + D.y * t
-  };
-}
-const T_MIN = -1;
-const T_MAX = 1;
-const T_STEP = 0.01;
-const T_DEFAULT = 1;
-
-// ---------- Zeichenfläche ----------
-// Enges Fenster um den tatsächlich durchlaufenen Bereich (t in [-1,1]): auf
-// schmalen Handybreiten (~375px CSS-Pixel, viewBox skaliert runter) war der
-// Pfeil bei der alten BOX/H nur ~17px lang und der Abstand der beiden
-// parallelen Geraden nur ~5-7px -- kaum sichtbar. Engeres Fenster + kleineres H
-// verdoppelt den Massstab, ohne dass ein Teil der Bewegung abgeschnitten wird.
-const W = 600;
-const H = 270;
-const PAD = 40;
-const BOX = {
-  xmin: -3.6,
-  xmax: 4.6,
-  ymin: -1.5,
-  ymax: 1.5
-};
-
-// ISOTROPE Skalen (eine gemeinsame px/Einheit für x UND y), sonst verzerrt sich
-// die Richtung von d optisch und "parallel" sieht nicht mehr parallel aus.
-function makeIsoScales(box) {
-  const worldW = box.xmax - box.xmin;
-  const worldH = box.ymax - box.ymin;
-  const availW = W - 2 * PAD;
-  const availH = H - 2 * PAD;
-  const s = Math.min(availW / worldW, availH / worldH);
-  const offX = PAD + (availW - worldW * s) / 2;
-  const offY = PAD + (availH - worldH * s) / 2;
-  return {
-    sx: x => offX + (x - box.xmin) * s,
-    sy: y => H - offY - (y - box.ymin) * s
-  };
-}
-const SC = makeIsoScales(BOX);
-
-// Schneidet eine unendliche Gerade (Basispunkt + Richtung) mit der Box und
-// liefert die zwei Endpunkte des sichtbaren Segments.
-function clipLineToBox(base, dir, box) {
-  let smin = -Infinity;
-  let smax = Infinity;
-  function bound(b0, bMin, bMax, d) {
-    if (Math.abs(d) < 1e-9) return; // Gerade parallel zur Achse -> keine Einschränkung
-    const s1 = (bMin - b0) / d;
-    const s2 = (bMax - b0) / d;
-    smin = Math.max(smin, Math.min(s1, s2));
-    smax = Math.min(smax, Math.max(s1, s2));
-  }
-  bound(base.x, box.xmin, box.xmax, dir.x);
-  bound(base.y, box.ymin, box.ymax, dir.y);
-  if (smin > smax) return null;
-  return [{
-    x: base.x + smin * dir.x,
-    y: base.y + smin * dir.y
-  }, {
-    x: base.x + smax * dir.x,
-    y: base.y + smax * dir.y
-  }];
-}
-
-// ---------- Farben ----------
+// ---------- Farben -----------------------------------------------------------
 const COL = {
-  homog: "#24435F",
-  // ink -- homogene Lösung / Richtungsvektor d
-  p0: "#1F9E6B",
-  // grün -- spezielle Lösung P_0
-  p0Dark: "#127A50",
-  inhomog: "#D9720A",
-  // orange -- inhomogene Lösung (das Ergebnis)
-  inhomogDark: "#B0590A",
-  grid: "#E4E1D9",
-  frame: "#E4E1D9",
-  axis: "#B9B9B9"
+  ink: "#1F2933",
+  muted: "#5B6472",
+  frame: "#D8DCE3",
+  panel: "#FFFFFF",
+  page: "#F7F8FA",
+  accent: "#1F6FB2",
+  beam: "#C2410C",
+  // Auswahl-Hintergrund aus derselben Farbfamilie wie der Strahl. Blau bleibt
+  // fuer Fokus und Primaerknopf reserviert -- eine Farbe, eine Bedeutung
+  // (Review: der Blick musste zwischen blauer Zeile und orangem Strahl
+  // uebersetzen).
+  beamSoft: "#FDEEE4"
 };
-const MONO = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
-function ArrowMarker({
-  id,
-  color,
-  size = 11
-}) {
-  return /*#__PURE__*/React.createElement("marker", {
-    id: id,
-    viewBox: "0 0 10 10",
-    refX: "8.5",
-    refY: "5",
-    markerWidth: size,
-    markerHeight: size,
-    markerUnits: "userSpaceOnUse",
-    orient: "auto-start-reverse"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M1,1 L9,5 L1,9 z",
-    fill: color
-  }));
+
+// ---------- Gewebestufen (cr-Entscheid: drei Stufen 0/3/6) -------------------
+// markInk: eigene, bewusst gewaehlte Farbe fuer die kleine x_i-Marke. Frueher
+// war das die Textfarbe mit opacity 0.72 -- damit lag der Kontrast auf allen
+// drei Gewebetoenen unter 4.5:1 (Review-Befund).
+const TISSUES = [{
+  v: 0,
+  long: "Hohlraum / Liquor",
+  short: "Hohlraum",
+  fill: "#2F6690",
+  text: "#FFFFFF",
+  markInk: "#DCE9F2"
+}, {
+  v: 3,
+  long: "Hirngewebe",
+  short: "Hirngewebe",
+  fill: "#D98C5F",
+  text: "#2A1608",
+  markInk: "#3D2410"
+}, {
+  v: 6,
+  long: "Knochen",
+  short: "Knochen",
+  fill: "#F0E2C0",
+  text: "#4A3B1B",
+  markInk: "#5A4820"
+}];
+const VALUES = TISSUES.map(t => t.v);
+const tissueOf = v => TISSUES.find(t => t.v === v) || TISSUES[0];
+const I0 = 100; // eingestrahlte Intensitaet
+
+// Echte Tiefstellung fuer die Zellmarken im SVG -- dort gibt es kein <sub>,
+// und "x1" neben dem "x_1" der Tabelle waeren zwei Schreibweisen fuer
+// dieselbe Groesse im selben Bild (Review-Befund).
+// Beschriftung der zurueckgenommenen Zellen: EINE dunkle Farbe statt der
+// gewebeabhaengigen. Eine blosse Gruppen-Deckkraft ueber der Schrift liess die
+// weisse Ziffer auf dem aufgehellten Hohlraum auf 1.44:1 absacken; dunkelgrau
+// traegt auf allen drei aufgehellten Toenen (4.5 / 6.5 / 8.8 : 1).
+const DIM_INK = "#3A4048";
+
+// Verdeckte Zelle: neutral, ohne Gewebeaussage. Das Fragezeichen steht fuer
+// "unbekannt", nicht fuer eine vierte Gewebeart -- deshalb ein Grau, das in
+// der Legende nicht vorkommt.
+const HIDDEN = {
+  fill: "#DEE2E7",
+  text: "#5A626C",
+  markInk: "#5A626C",
+  // Eigene Fugenfarbe: eine weisse Fuge loest das verdeckte Raster auf der
+  // weissen Karte auf (1.12:1 gemessen), und im verdeckten Zustand ist das
+  // Raster die einzige Ortsangabe.
+  stroke: "#8B95A2"
+};
+const SUBDIGITS = ["\u2080", "\u2081", "\u2082", "\u2083", "\u2084", "\u2085", "\u2086", "\u2087", "\u2088", "\u2089"];
+
+// ---------- die neun Strahlen ------------------------------------------------
+// cells: Zellindizes 0..8 in DURCHLAUFRICHTUNG des Strahls (Eintritt zuerst).
+// dir:   Richtungsvektor in BILDkoordinaten (Spalte nach rechts, Zeile nach
+//        unten).
+// label: Winkel der Geraden in der ueblichen Lage (y nach oben) -- siehe
+//        Kopfkommentar.
+const RAYS = [{
+  id: "Z1",
+  cells: [0, 1, 2],
+  dir: [1, 0],
+  glyph: "→",
+  label: "0°"
+}, {
+  id: "Z2",
+  cells: [3, 4, 5],
+  dir: [1, 0],
+  glyph: "→",
+  label: "0°"
+}, {
+  id: "Z3",
+  cells: [6, 7, 8],
+  dir: [1, 0],
+  glyph: "→",
+  label: "0°"
+}, {
+  id: "S1",
+  cells: [0, 3, 6],
+  dir: [0, 1],
+  glyph: "↓",
+  label: "90°"
+}, {
+  id: "S2",
+  cells: [1, 4, 7],
+  dir: [0, 1],
+  glyph: "↓",
+  label: "90°"
+}, {
+  id: "D0",
+  cells: [0, 4, 8],
+  dir: [1, 1],
+  glyph: "↘",
+  label: "135°"
+}, {
+  id: "D1",
+  cells: [3, 7],
+  dir: [1, 1],
+  glyph: "↘",
+  label: "135°"
+}, {
+  id: "A1",
+  cells: [1, 3],
+  dir: [-1, 1],
+  glyph: "↙",
+  label: "45°"
+}, {
+  id: "A2",
+  cells: [2, 4, 6],
+  dir: [-1, 1],
+  glyph: "↙",
+  label: "45°"
+}];
+
+// Koeffizientenmatrix (9x9, Eintraege 0/1) -- fest, unabhaengig von der Eingabe.
+const MATRIX = RAYS.map(r => {
+  const row = new Array(9).fill(0);
+  r.cells.forEach(c => row[c] = 1);
+  return row;
+});
+
+// ---------- exakte Bruchrechnung ---------------------------------------------
+function gcd(a, b) {
+  a = Math.abs(a);
+  b = Math.abs(b);
+  while (b) {
+    const t = a % b;
+    a = b;
+    b = t;
+  }
+  return a;
 }
-function Arrow({
-  from,
-  to,
-  color,
-  width = 3,
-  markerId,
-  dashed
-}) {
-  return /*#__PURE__*/React.createElement("line", {
-    x1: SC.sx(from.x),
-    y1: SC.sy(from.y),
-    x2: SC.sx(to.x),
-    y2: SC.sy(to.y),
-    stroke: color,
-    strokeWidth: width,
-    strokeLinecap: "round",
-    strokeDasharray: dashed ? "6 4" : undefined,
-    markerEnd: markerId ? `url(#${markerId})` : undefined
-  });
+function fmake(n, d) {
+  if (d < 0) {
+    n = -n;
+    d = -d;
+  }
+  const g = gcd(n, d) || 1;
+  return {
+    n: n / g,
+    d: d / g
+  };
+}
+const fnum = n => ({
+  n,
+  d: 1
+});
+const fsub = (a, b) => fmake(a.n * b.d - b.n * a.d, a.d * b.d);
+const fmul = (a, b) => fmake(a.n * b.n, a.d * b.d);
+const fdiv = (a, b) => fmake(a.n * b.d, a.d * b.n);
+const fzero = a => a.n === 0;
+
+// Gauss-Jordan mit exakter Bruchrechnung. Gibt null zurueck, falls die Matrix
+// singulaer waere -- bei dieser festen Matrix kann das nicht vorkommen, wird
+// aber nicht stillschweigend vorausgesetzt.
+function solveExact(m, rhs) {
+  const n = rhs.length;
+  const A = m.map((row, i) => row.map(fnum).concat([fnum(rhs[i])]));
+  for (let col = 0; col < n; col++) {
+    let piv = -1;
+    for (let r = col; r < n; r++) {
+      if (!fzero(A[r][col])) {
+        piv = r;
+        break;
+      }
+    }
+    if (piv < 0) return null;
+    if (piv !== col) {
+      const t = A[piv];
+      A[piv] = A[col];
+      A[col] = t;
+    }
+    const p = A[col][col];
+    for (let c = col; c <= n; c++) A[col][c] = fdiv(A[col][c], p);
+    for (let r = 0; r < n; r++) {
+      if (r === col || fzero(A[r][col])) continue;
+      const f = A[r][col];
+      for (let c = col; c <= n; c++) A[r][c] = fsub(A[r][c], fmul(f, A[col][c]));
+    }
+  }
+  return A.map(row => row[n]);
 }
 
-// Vektor-Notation im HTML-Text: Pfeil ÜBER dem Buchstaben (Hausnotation aus
-// cr's Material: der Pfeil über einem Punktnamen meint dessen Ortsvektor).
-// Der tiefgestellte Index steht daneben, nicht unter dem Pfeil.
-// Der Buchstabe bleibt im normalen Textfluss (Grundlinie stimmt), der Pfeil wird
-// absolut darüber gesetzt -- Flex-Spalten verschieben sonst die Grundlinie.
-// Die umgebenden Container brauchen dafür lineHeight >= 1.7.
-function Vec({
-  letter,
-  sub
-}) {
-  return /*#__PURE__*/React.createElement("span", {
-    style: {
-      whiteSpace: "nowrap"
+// Bruch als Text -- bei diesem System ist die Loesung stets ganzzahlig, die
+// Bruchdarstellung ist die ehrliche Rueckfallebene.
+const fracText = f => f.d === 1 ? String(f.n) : `${f.n}/${f.d}`;
+
+// ---------- Stufenform der erweiterten Koeffizientenmatrix -------------------
+// Das Dossier bringt die erweiterte Koeffizientenmatrix auf STUFENFORM und
+// loest dann durch Rueckwaertseinsetzen; Gauss-Jordan (weiter bis zur
+// Einheitsmatrix) lehnt es ausdruecklich ab: "Wir bleiben beim
+// Rueckwaertseinsetzen: Es ist kuerzer, und die Einheitsmatrix brauchen wir
+// hier nirgends." (T_LinAlg_3f_2026.tex, Randbemerkung nach Beispiel 1.)
+// Deshalb zeigt das Applet die Stufenform, nicht die reduzierte.
+//
+// Gerechnet wird wie von Hand im Skript, mit GANZZAHLIGEN Zeilenoperationen
+// (dort etwa "3Z1+2Z2"): Z_i := p*Z_i - a*Z_r, danach die Zeile durch ihren
+// groessten gemeinsamen Teiler kuerzen. So entstehen nirgends Brueche, und die
+// Zahlen bleiben klein (in der Koeffizientenmatrix hoechstens 2). Die linke
+// Seite haengt nicht von der Eingabe ab -- nur die letzte Spalte aendert sich.
+function stufenform(m, rhs) {
+  const n = rhs.length;
+  const A = m.map((row, i) => row.concat([rhs[i]]));
+  let r = 0;
+  for (let c = 0; c < n && r < n; c++) {
+    let piv = -1;
+    for (let i = r; i < n; i++) {
+      if (A[i][c] !== 0) {
+        piv = i;
+        break;
+      }
     }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      position: "relative",
-      display: "inline-block",
-      fontStyle: "italic",
-      lineHeight: 1
+    if (piv < 0) continue;
+    if (piv !== r) {
+      const t = A[piv];
+      A[piv] = A[r];
+      A[r] = t;
     }
-  }, letter, /*#__PURE__*/React.createElement("span", {
-    "aria-hidden": "true",
-    style: {
-      position: "absolute",
-      left: 0,
-      right: 0,
-      bottom: "1em",
-      fontSize: "0.62em",
-      lineHeight: 1,
-      textAlign: "center",
-      fontStyle: "normal"
+    const p = A[r][c];
+    for (let i = r + 1; i < n; i++) {
+      const a = A[i][c];
+      if (a === 0) continue;
+      A[i] = A[i].map((v, k) => p * v - a * A[r][k]);
+      let g = 0;
+      for (const v of A[i]) g = gcd(g, Math.abs(v));
+      if (g > 1) A[i] = A[i].map(v => v / g);
+      const lead = A[i].find(v => v !== 0) || 0;
+      if (lead < 0) A[i] = A[i].map(v => -v);
     }
-  }, "→")), sub ? /*#__PURE__*/React.createElement("sub", {
-    style: {
-      fontStyle: "normal",
-      fontSize: "0.72em"
-    }
-  }, sub) : null);
+    r++;
+  }
+  // Spaltenindex des fuehrenden Eintrags je Zeile (fuer die Treppen-Hervorhebung)
+  const pivots = A.map(row => row.slice(0, n).findIndex(v => v !== 0));
+  return {
+    rows: A,
+    pivots
+  };
 }
 
-// Eine Haelfte eines runden Klammerpaars als SVG-Pfad. preserveAspectRatio
-// ="none" laesst die Klammer auf JEDE Inhaltshoehe mitwachsen (zwei Zeilen,
-// drei Zeilen, andere Schriftgroesse), vectorEffect="non-scaling-stroke" haelt
-// die Strichstaerke dabei konstant -- ohne das wird die Linie beim Strecken
-// mitverzerrt und die Klammer wirkt oben/unten fett. Breite in em, damit die
-// Klammer der clamp()-Schriftgroesse folgt.
-// Verfahren uebernommen aus normalgleichungen-beste-loesung.jsx.
+// ---------- Graustufe fuer das rekonstruierte Bild ---------------------------
+// Undurchlaessigkeit 0 -> dunkel, 6 -> hell (wie auf einem CT-Schnitt: Knochen
+// hell, Hohlraum dunkel).
+function greyOf(v) {
+  const t = Math.max(0, Math.min(1, v / 6));
+  const g = Math.round(40 + t * (240 - 40));
+  return `rgb(${g},${g},${g})`;
+}
+// Schwelle nach Kontrastmessung: auf dem mittleren Grau (Wert 3) traegt
+// dunkler Text 3.95:1, heller nur 3.39:1 -- also dunkel schon ab Wert 3.
+const greyText = v => v >= 2.6 ? "#141414" : "#F2F4F7";
+
+// ---------- runde Klammern fuer den Spaltenvektor ----------------------------
+// Die Breite ist ein Parameter, weil "preserveAspectRatio=none" nur vertikal
+// streckt: bei fester Breite 10px bleibt die Bauchung 3px, egal wie hoch die
+// Klammer ist -- neun Zeilen lasen sich dann als Betragsstriche statt als
+// Klammern (Review-Befund). Ein neunzeiliger Vektor bekommt deshalb 18px.
+// Verfahren uebernommen aus normalgleichungen-beste-loesung.jsx, Strichstaerke
+// von 2 auf 2.8 erhoeht (Review: wirkten als Haarlinien neben fetten Zahlen).
 function VecParen({
   side,
-  color
+  width = 10
 }) {
   const d = side === "left" ? "M7.8,2 C3.6,26 3.6,74 7.8,98" : "M2.2,2 C6.4,26 6.4,74 2.2,98";
   return /*#__PURE__*/React.createElement("svg", {
@@ -586,706 +752,1029 @@ function VecParen({
       top: 0,
       bottom: 0,
       [side]: 0,
-      width: "0.58em",
+      width,
       height: "100%"
     }
   }, /*#__PURE__*/React.createElement("path", {
     d: d,
     fill: "none",
-    stroke: color,
-    strokeWidth: "1.6",
+    stroke: COL.ink,
+    strokeWidth: "2.8",
     strokeLinecap: "round",
     vectorEffect: "non-scaling-stroke"
   }));
 }
 
-// Stehender Spaltenvektor: Komponenten untereinander, rechtsbuendig (so stehen
-// Minuszeichen aussen und die Ziffern untereinander), in runden Klammern.
-// Ueberall dort, wo ADDIERT oder GESTRECKT wird (cr, 2026-09-03). Monospace,
-// damit die Komponenten wirklich uebereinander stehen; verticalAlign "middle"
-// setzt die Klammer mittig zu "=", "+" und dem Streckfaktor daneben.
-function ColVec({
-  rows,
-  color
+// Vektorsymbol mit Pfeil -- das Dossier schreibt durchgehend \vec x.
+function VecSym({
+  letter
 }) {
   return /*#__PURE__*/React.createElement("span", {
     style: {
       position: "relative",
-      display: "inline-flex",
-      flexDirection: "column",
-      alignItems: "flex-end",
-      fontFamily: MONO,
-      lineHeight: 1.18,
-      padding: "0.1em 0.62em",
-      color,
-      verticalAlign: "middle",
-      whiteSpace: "nowrap"
-    }
-  }, /*#__PURE__*/React.createElement(VecParen, {
-    side: "left",
-    color: color
-  }), rows.map((r, i) => /*#__PURE__*/React.createElement("span", {
-    key: i
-  }, r)), /*#__PURE__*/React.createElement(VecParen, {
-    side: "right",
-    color: color
-  }));
-}
-
-// Mengenklammer, die einem zweizeiligen Spaltenvektor der Hoehe nach standhaelt.
-function SetBrace({
-  ch
-}) {
-  return /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: "Georgia, serif",
-      fontSize: "2.1em",
-      lineHeight: 0.85,
-      color: "#A6A6A6"
-    }
-  }, ch);
-}
-
-// Zusammengehoerige Gruppe (z. B. "t mal Vektor"), die beim Umbrechen nicht
-// auseinandergerissen werden darf.
-function Term({
-  children,
-  style
-}) {
-  return /*#__PURE__*/React.createElement("span", {
-    style: {
-      display: "inline-flex",
-      alignItems: "center",
-      whiteSpace: "nowrap",
-      ...style
-    }
-  }, children);
-}
-
-// Loesungsmenge in Vektorform: Aufpunkt + gestreckter Richtungsvektor als
-// stehende Spaltenvektoren. Ohne Aufpunkt (base = null) ergibt sich die
-// homogene Loesungsmenge. Der senkrechte Strich bleibt -- er ist hier das
-// Mengenbildungszeichen, kein Koordinatentrenner.
-// Die Beschriftung "L =" ist ein eigenes Flex-Element: auf schmalen Geraeten
-// rutscht sie auf eine eigene Zeile, statt die Mengenklammer zu quetschen.
-function SolutionSet({
-  label,
-  sub,
-  base,
-  dir,
-  color
-}) {
-  return /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-set",
-    style: {
-      display: "flex",
-      flexWrap: "wrap",
-      alignItems: "center",
-      columnGap: "0.35em",
-      rowGap: 2
+      display: "inline-block",
+      lineHeight: 1,
+      padding: "0 1px"
     }
   }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      whiteSpace: "nowrap"
-    }
-  }, /*#__PURE__*/React.createElement("i", null, label), sub ? /*#__PURE__*/React.createElement("sub", {
-    style: {
-      fontSize: "0.72em"
-    }
-  }, sub) : null, " ="), /*#__PURE__*/React.createElement(Term, {
-    style: {
-      columnGap: "0.22em"
-    }
-  }, /*#__PURE__*/React.createElement(SetBrace, {
-    ch: "{"
-  }), base ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(ColVec, {
-    rows: base,
-    color: color
-  }), /*#__PURE__*/React.createElement("span", null, "+")) : null, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("i", null, "t"), "·"), /*#__PURE__*/React.createElement(ColVec, {
-    rows: dir,
-    color: color
-  }), /*#__PURE__*/React.createElement("span", {
-    style: {
-      padding: "0 0.1em",
-      color: "#9AA1AC"
-    }
-  }, "|"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("i", null, "t"), "∈ℝ"), /*#__PURE__*/React.createElement(SetBrace, {
-    ch: "}"
-  })));
-}
-
-// Punkt-Notation im HTML-Text: kursiver Name, KEIN Pfeil.
-function Pt({
-  letter,
-  sub
-}) {
-  return /*#__PURE__*/React.createElement("span", {
     style: {
       fontStyle: "italic"
     }
-  }, letter, sub ? /*#__PURE__*/React.createElement("sub", {
+  }, letter), /*#__PURE__*/React.createElement("svg", {
+    viewBox: "0 0 20 8",
+    preserveAspectRatio: "none",
+    "aria-hidden": "true",
     style: {
-      fontStyle: "normal",
-      fontSize: "0.75em"
+      position: "absolute",
+      left: "-0.04em",
+      right: "-0.10em",
+      top: "-0.16em",
+      height: "0.24em"
     }
-  }, sub) : null);
+  }, /*#__PURE__*/React.createElement("line", {
+    x1: "0.8",
+    y1: "4",
+    x2: "15",
+    y2: "4",
+    stroke: "currentColor",
+    strokeWidth: "1.8"
+  }), /*#__PURE__*/React.createElement("polygon", {
+    points: "20,4 13.5,0.6 13.5,7.4",
+    fill: "currentColor"
+  })));
 }
 
-// Gleichungsraster: die beiden Gleichungen stehen untereinander, die
-// Gleichheitszeichen exakt in einer senkrechten Linie, die Koeffizienten
-// spaltenweise bündig (cr-Wunsch "am = schön ausrichten").
-function EqSystem({
-  rows,
-  color
-}) {
-  return /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-eq",
-    style: {
-      display: "inline-grid",
-      gridTemplateColumns: "auto auto auto auto auto",
-      alignItems: "center",
-      rowGap: 2,
-      fontFamily: MONO,
-      color
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      gridRow: `span ${rows.length}`,
-      fontSize: "2.3em",
-      lineHeight: 1,
-      color: "#A6A6A6",
-      paddingRight: "0.12em",
-      fontFamily: "Georgia, serif"
-    }
-  }, "{"), rows.map((r, i) => /*#__PURE__*/React.createElement(React.Fragment, {
-    key: i
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      textAlign: "right"
-    }
-  }, r.a), /*#__PURE__*/React.createElement("span", {
-    style: {
-      textAlign: "right",
-      paddingLeft: "0.35em"
-    }
-  }, r.b), /*#__PURE__*/React.createElement("span", {
-    style: {
-      textAlign: "center",
-      padding: "0 0.35em"
-    }
-  }, "="), /*#__PURE__*/React.createElement("span", {
-    style: {
-      textAlign: "right"
-    }
-  }, r.c))));
-}
+// ---------- Geometrie des Rasters --------------------------------------------
+// Rand asymmetrisch: seitlich brauchen die dreistelligen Intensitaetslabels
+// mehr Platz als oben und unten. Vorher war der Rand quadratisch mit 66 -- das
+// Raster fuellte dadurch nur ein Viertel seiner Karte (Review-Befund).
+const CELL = 90;
+const GRID = 3 * CELL;
+const PADX = 60;
+const PADY = 50;
+const VW = GRID + 2 * PADX;
+const VH = GRID + 2 * PADY;
+const OUT = 23; // Ueberstand des Strahls ausserhalb des Rasters
+const centerOf = i => ({
+  x: PADX + (i % 3 + 0.5) * CELL,
+  y: PADY + (Math.floor(i / 3) + 0.5) * CELL
+});
 
-// Dezimaltrennzeichen: PUNKT (SKRIPT_KONVENTIONEN.md). Das Komma bleibt dem
-// Trennen der Koordinaten vorbehalten. Minuszeichen als echtes U+2212.
-function fmt(v) {
-  const r = Math.round(v * 100) / 100;
-  return (r === 0 ? 0 : r).toString().replace("-", "−");
-}
-// Koordinaten IMMER mit Komma + Abstand, nie mit senkrechtem Strich (cr,
-// 2026-09-03) -- der Abstand verhindert die Verwechslung mit einem Dezimalkomma.
-function fmtPair(p) {
-  return `(${fmt(p.x)}, ${fmt(p.y)})`;
-}
-// Streckfaktor, wie er HINTER einem Pluszeichen stehen darf: ein negatives t
-// bekommt eine Klammer, sonst stuende dort "+ −0.99·".
-function fmtFactorAfterPlus(v) {
-  return v < 0 ? `(${fmt(v)})·` : `${fmt(v)}·`;
-}
-function LgsLoesungsstruktur() {
-  const [t, setT] = useState(T_DEFAULT);
-  const [showDecomp, setShowDecomp] = useState(false);
-  const Ph = useMemo(() => homogPoint(t), [t]);
-  const Pi = useMemo(() => inhomogPoint(t), [t]);
-  const homogLine = useMemo(() => clipLineToBox({
-    x: 0,
-    y: 0
-  }, D, BOX), []);
-  const inhomogLine = useMemo(() => clipLineToBox(P0, D, BOX), []);
-  const O = {
-    x: 0,
-    y: 0
+// ---------- Hauptkomponente ---------------------------------------------------
+function CtTomographieLgs() {
+  const [cells, setCells] = useState([6, 3, 6, 3, 0, 3, 6, 3, 6]);
+  const [selected, setSelected] = useState(0);
+  const [showSolution, setShowSolution] = useState(false);
+  // Verdeckter Zufallsschaedel (cr, 2026-09-04): Nach "Zufallsschaedel" ist das
+  // Raster unbekannt -- Zellen neutral, Werte als Fragezeichen. Sichtbar sind
+  // nur die Messwerte; der Schaedel wird ausschliesslich gerechnet sichtbar,
+  // im CT-Bild unten. Das obere Raster bleibt auch nach "Loesung anzeigen"
+  // verdeckt (cr-Entscheid) -- genau das ist die Pointe der Tomographie.
+  // Einzelne Zellen lassen sich trotzdem antippen und damit aufdecken; der
+  // Rest bleibt verborgen (cr-Entscheid), so entsteht ein Teilraetsel.
+  const [revealed, setRevealed] = useState(() => new Array(9).fill(true));
+  const [wide, setWide] = useState(true);
+  const [narrow, setNarrow] = useState(false);
+  const [compact, setCompact] = useState(false);
+  const [boxW, setBoxW] = useState(1024);
+  const boxRef = useRef(null);
+  const solutionRef = useRef(null);
+  const scrollTimer = useRef(null);
+  useEffect(() => () => window.clearTimeout(scrollTimer.current), []);
+
+  // Layoutbreite an der Komponente messen, nicht am Viewport (iframe-fest).
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const apply = w => {
+      // Zweispaltig erst, wenn die LGS-Karte die neun ausgerichteten
+      // Termspalten auch wirklich traegt (6/11 der Breite muessen >= 440px
+      // ergeben). Bei 660 als Schwelle wurde das Layout zweispaltig, bevor der
+      // Platz dafuer da war -- die Gleichungen fielen dann auf den einzeiligen
+      // Satz zurueck, obwohl einspaltig genug Breite vorhanden gewesen waere
+      // (cr, 2026-09-04: "das lgs ist nicht schoen spaltenweise, obwohl der
+      // Platz vermutlich reicht"). Unterhalb von 890px steht das Raster also
+      // ueber dem Gleichungssystem, dafuer bleibt die Standardform
+      // ausgerichtet -- sie ist der Grund, warum das LGS so gesetzt wird.
+      setWide(w >= 890);
+      setNarrow(w < 360);
+      // Kompakter Satz haengt an der Breite der LGS-KARTE, nicht an der des
+      // Fensters: im zweispaltigen Layout bekommt die Karte nur 6/11 der
+      // Breite, eine 700px-Ansicht hat dort also weniger Platz als eine
+      // einspaltige 640px-Ansicht.
+      //
+      // Die Schwelle liegt so tief, wie die Ausrichtung physikalisch traegt
+      // (cr, 2026-09-05: das LGS soll spaltenweise stehen, wo immer der Platz
+      // reicht -- die ausgerichtete Standardform ist der Grund, warum das LGS
+      // ueberhaupt so gesetzt wird). Unter 330px Kartenbreite entfaellt dafuer
+      // die Messwertspalte -- der Messwert steht ohnehin unter dem Raster --,
+      // und erst unter 270px wird einzeilig gesetzt. Damit ist ein 375px-Handy
+      // noch ausgerichtet; bei 320px reicht es rechnerisch nicht mehr
+      // (Bedarf ~240px bei 230px Platz).
+      const eqAv = (w >= 890 ? w * 0.545 : w) - 46;
+      setCompact(eqAv < 270);
+      setBoxW(w);
+    };
+    apply(el.getBoundingClientRect().width);
+    if (typeof ResizeObserver === "undefined") return;
+    // Beide Messungen muessen dieselbe Box meinen. contentRect ist die
+    // CONTENT-Box, getBoundingClientRect die BORDER-Box -- und weil die
+    // Polsterung dieser Komponente selbst von `wide` abhaengt, schloss sich
+    // damit eine Rueckkopplung: 680px Border-Box -> Content 660 -> wide=true
+    // -> Polsterung 14 -> Content 652 -> wide=false -> ... Gemessen 45
+    // Umschaltungen in 1.5s, das Applet flackerte dauerhaft (Review-Befund
+    // Runde 6). Die Border-Box haengt nicht von der eigenen Polsterung ab und
+    // ist deshalb der stabile Bezug.
+    const ro = new ResizeObserver(() => {
+      apply(el.getBoundingClientRect().width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Abschwaechungen (rechte Seiten) und Messwerte
+  const rhs = useMemo(() => RAYS.map(r => r.cells.reduce((s, c) => s + cells[c], 0)), [cells]);
+  const measured = useMemo(() => rhs.map(b => I0 - b), [rhs]);
+
+  // Loesung des LGS -- aus den Messungen, nicht aus der Eingabe.
+  const solution = useMemo(() => solveExact(MATRIX, rhs), [rhs]);
+  const zsf = useMemo(() => stufenform(MATRIX, rhs), [rhs]);
+  const cycle = i => {
+    setCells(prev => {
+      const next = prev.slice();
+      // Eine verdeckte Zelle bekommt beim ersten Antippen ihren eigenen Wert
+      // zu sehen, statt gleich weiterzuzyklieren.
+      if (!revealed[i]) return next;
+      next[i] = VALUES[(VALUES.indexOf(next[i]) + 1) % VALUES.length];
+      return next;
+    });
+    setRevealed(prev => {
+      if (prev[i]) return prev;
+      const next = prev.slice();
+      next[i] = true;
+      return next;
+    });
   };
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-      background: "#F7F6F3",
-      minHeight: "100vh",
-      padding: "20px 12px",
-      color: "#1E2430",
-      boxSizing: "border-box"
+  const randomise = () => {
+    setCells(Array.from({
+      length: 9
+    }, () => VALUES[Math.floor(Math.random() * VALUES.length)]));
+    setRevealed(new Array(9).fill(false));
+    setShowSolution(false);
+  };
+  const clear = () => {
+    setCells(new Array(9).fill(0));
+    setRevealed(new Array(9).fill(true));
+  };
+  const toggleSolution = () => {
+    const opening = !showSolution;
+    setShowSolution(opening);
+    // Ohne das sieht man auf dem Tablet nach dem Tippen nur den umbenannten
+    // Knopf -- die neue Zeile beginnt unterhalb des Falzes (Review-Befund).
+    if (opening) {
+      scrollTimer.current = window.setTimeout(() => {
+        const el = solutionRef.current;
+        if (el && el.scrollIntoView) {
+          el.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest"
+          });
+        }
+      }, 60);
     }
-  }, /*#__PURE__*/React.createElement("style", null, `
-        .lgsls-two { display: grid; grid-template-columns: 1fr 1fr;
-                     gap: clamp(5px, 1.8vw, 10px); align-items: stretch; }
-        .lgsls-card { background: #FFFFFF; border: 1px solid ${COL.frame};
-                      border-radius: 10px; padding: clamp(6px, 2.2vw, 12px);
-                      box-sizing: border-box; min-width: 0; }
-        .lgsls-tile { border-radius: 10px; padding: clamp(7px, 2.6vw, 12px);
-                      box-sizing: border-box; min-width: 0; }
-        .lgsls-head { font-size: clamp(9.5px, 2.8vw, 12px); line-height: 1.25;
-                      margin-bottom: 6px; }
-        .lgsls-card .lgsls-head { min-height: 2.5em; }
-        .lgsls-eq   { font-size: clamp(10px, 3.2vw, 13px); }
-        .lgsls-set  { font-size: clamp(9.5px, 2.9vw, 12.5px); color: #5B6472;
-                      margin-top: 8px; }
-        .lgsls-form { font-size: clamp(9.5px, 2.9vw, 12.5px);
-                      font-family: ${MONO}; }
-        .lgsls-res  { font-size: clamp(11px, 3.7vw, 15.5px); font-weight: 700;
-                      font-family: ${MONO}; margin-top: 6px; }
-      `), /*#__PURE__*/React.createElement("div", {
-    style: {
-      maxWidth: 700,
-      margin: "0 auto"
-    }
-  }, /*#__PURE__*/React.createElement("h1", {
-    style: {
-      fontFamily: "Georgia, 'Times New Roman', serif",
-      fontSize: 23,
-      fontWeight: 700,
-      margin: "0 0 4px 0",
-      letterSpacing: "-0.01em"
-    }
-  }, "Homogene und inhomogene Lösungsgerade"), /*#__PURE__*/React.createElement("p", {
-    style: {
-      fontSize: 14,
-      color: "#5B6472",
-      margin: "0 0 14px 0"
-    }
-  }, "Zieh am Regler für ", /*#__PURE__*/React.createElement("b", null, "t"), ". Beobachte die beiden Punkte — und wie der Pfeil vom blauen zum orangen Punkt dabei immer derselbe bleibt."), /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-two",
-    style: {
-      marginBottom: 10
-    }
+  };
+  const ray = RAYS[selected];
+
+  // Legende: so viele Spalten, dass nie ein einzelner Eintrag als Waise in der
+  // letzten Zeile steht. Vier Einträge (mit "? unbekannt") gehen entweder alle
+  // in eine Zeile oder in zwei mal zwei; drei entweder in eine Zeile oder
+  // untereinander. `repeat(auto-fit, …)` hatte stattdessen 3+1 gesetzt
+  // (Review-Befund Runde 6).
+  const legendeVerdeckt = revealed.some(r => !r);
+  const legAnzahl = legendeVerdeckt ? 4 : 3;
+  // Karteninnenbreite und Platzbedarf sind gemessen, nicht geschaetzt
+  // (Review-Befunde Runden 7 und 8): im breiten Layout ist die Rasterkarte
+  // 5 von 11 Spalten, innen bleiben 0.4545*boxW - 49 (die zwei Rahmenpixel
+  // eingerechnet); im schmalen die volle Breite minus Root- und
+  // Kartenpolsterung. Bedarf der Legende, an der gerenderten Breite
+  // abgelesen: drei Eintraege 376 (breit) / 339 (schmal), vier Eintraege
+  // 489 / 438; mit gekuerztem Text 327/294 bzw. 443/396.
+  const legAvail = wide ? boxW * 0.4545 - 49 : boxW - 44;
+  // Reicht der Platz nicht fuer eine Zeile, wird zuerst der laengste Eintrag
+  // gekuerzt ("Hohlraum" statt "Hohlraum / Liquor") und erst danach umbrochen
+  // -- sonst stapelt die Legende ausgerechnet auf den gaengigen Handybreiten
+  // (393, 412, 430) auf drei Zeilen (Review-Befund Runde 7).
+  const legNeedLang = legAnzahl === 4 ? wide ? 501 : 450 : wide ? 388 : 351;
+  const legNeedKurz = legAnzahl === 4 ? wide ? 455 : 408 : wide ? 339 : 306;
+  const legLang = legAvail >= legNeedLang;
+  const legCols = legAvail >= (legLang ? legNeedLang : legNeedKurz) ? legAnzahl : legAnzahl === 4 ? 2 : 1;
+
+  // Strahlengeometrie. Anfangs- und Endpunkt sind NICHT "Zellmitte minus
+  // fester Betrag" -- bei einer Diagonalen laege der Startpunkt dann noch
+  // innerhalb des Rasters. Stattdessen wird die Gerade am Rasterrand
+  // geschnitten und von dort um OUT verlaengert.
+  const beam = useMemo(() => {
+    const r = RAYS[selected];
+    const a = centerOf(r.cells[0]);
+    const [dx, dy] = r.dir;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len;
+    const uy = dy / len;
+    const limit = (p, u, lo, hi) => {
+      if (Math.abs(u) < 1e-9) return [Infinity, Infinity];
+      const t1 = (hi - p) / u;
+      const t2 = (lo - p) / u;
+      return [Math.max(t1, t2), -Math.min(t1, t2)]; // [vorwaerts, rueckwaerts]
+    };
+    const [fx, bx0] = limit(a.x, ux, PADX, PADX + GRID);
+    const [fy, by0] = limit(a.y, uy, PADY, PADY + GRID);
+    const tFwd = Math.min(fx, fy);
+    const tBack = Math.min(bx0, by0);
+    const start = {
+      x: a.x - (tBack + OUT) * ux,
+      y: a.y - (tBack + OUT) * uy
+    };
+    const end = {
+      x: a.x + (tFwd + OUT) * ux,
+      y: a.y + (tFwd + OUT) * uy
+    };
+    // Ein- und Austrittspunkt am Rasterrand: innerhalb davon wird die Linie
+    // zurueckgenommen, damit sie die Ziffern nicht durchschneidet.
+    const enter = {
+      x: a.x - tBack * ux,
+      y: a.y - tBack * uy
+    };
+    const exit = {
+      x: a.x + tFwd * ux,
+      y: a.y + tFwd * uy
+    };
+    const h = 9;
+    const w = 5.5;
+    const bx = end.x - ux * h;
+    const by = end.y - uy * h;
+    const head = [`${end.x},${end.y}`, `${bx - uy * w},${by + ux * w}`, `${bx + uy * w},${by - ux * w}`].join(" ");
+    return {
+      start,
+      end,
+      enter,
+      exit,
+      head,
+      ux,
+      uy
+    };
+  }, [selected]);
+  const cardStyle = {
+    background: COL.panel,
+    border: `1px solid ${COL.frame}`,
+    borderRadius: 12,
+    padding: wide ? 14 : 11,
+    boxSizing: "border-box",
+    minWidth: 0
+  };
+  const headStyle = {
+    fontSize: wide ? 13 : 12,
+    fontWeight: 700,
+    color: COL.ink,
+    marginBottom: 8
+  };
+  const solutionCard = /*#__PURE__*/React.createElement("div", {
+    style: cardStyle
   }, /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-card"
+    style: headStyle
+  }, "Stufenform der erweiterten Koeffizientenmatrix"), /*#__PURE__*/React.createElement(StufenformMatrix, {
+    zsf: zsf,
+    wide: wide,
+    boxW: boxW
+  }));
+  const imageCard = /*#__PURE__*/React.createElement("div", {
+    style: cardStyle
   }, /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-head",
-    style: {
-      color: COL.inhomogDark,
-      fontWeight: 700
-    }
-  }, "Inhomogenes LGS"), /*#__PURE__*/React.createElement(EqSystem, {
-    color: COL.inhomogDark,
-    rows: [{
-      a: "x",
-      b: "+ 3y",
-      c: "1"
-    }, {
-      a: "2x",
-      b: "+ 6y",
-      c: "2"
-    }]
-  }), /*#__PURE__*/React.createElement(SolutionSet, {
-    label: "L",
-    base: [fmt(P0.x), fmt(P0.y)],
-    dir: [fmt(D.x), fmt(D.y)],
-    color: COL.inhomogDark
-  })), /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-card"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-head",
-    style: {
-      color: COL.homog,
-      fontWeight: 700
-    }
-  }, "Zugehöriges homogenes LGS"), /*#__PURE__*/React.createElement(EqSystem, {
-    color: COL.homog,
-    rows: [{
-      a: "x",
-      b: "+ 3y",
-      c: "0"
-    }, {
-      a: "2x",
-      b: "+ 6y",
-      c: "0"
-    }]
-  }), /*#__PURE__*/React.createElement(SolutionSet, {
-    label: "L",
-    sub: "homogen",
-    base: null,
-    dir: [fmt(D.x), fmt(D.y)],
-    color: COL.homog
-  }))), /*#__PURE__*/React.createElement("p", {
-    style: {
-      fontSize: 12,
-      color: "#8A8A8A",
-      margin: "0 2px 14px 2px"
-    }
-  }, "Die zweite Gleichung ist jeweils das Doppelte der ersten. Darum bleibt eine Variable frei — und die Lösungsmenge ist eine ganze Gerade statt eines einzelnen Punktes."), /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: "#FFFFFF",
-      border: `1px solid ${COL.frame}`,
-      borderRadius: 12,
-      padding: 6
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "100%",
-    viewBox: `0 0 ${W} ${H}`,
-    role: "img",
-    "aria-label": "Homogene Gerade durch den Ursprung und dazu parallel verschobene inhomogene Gerade, mit den Lösungspunkten zum Parameter t",
-    style: {
-      display: "block",
-      width: "100%",
-      maxWidth: "100%"
-    }
-  }, /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement(ArrowMarker, {
-    id: "mk-homog",
-    color: COL.homog
-  }), /*#__PURE__*/React.createElement(ArrowMarker, {
-    id: "mk-p0",
-    color: COL.p0
-  }), /*#__PURE__*/React.createElement(ArrowMarker, {
-    id: "mk-inhomog",
-    color: COL.inhomogDark
-  })), /*#__PURE__*/React.createElement("line", {
-    x1: SC.sx(BOX.xmin),
-    y1: SC.sy(0),
-    x2: SC.sx(BOX.xmax),
-    y2: SC.sy(0),
-    stroke: COL.axis,
-    strokeWidth: "1.2"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: SC.sx(0),
-    y1: SC.sy(BOX.ymin),
-    x2: SC.sx(0),
-    y2: SC.sy(BOX.ymax),
-    stroke: COL.axis,
-    strokeWidth: "1.2"
-  }), /*#__PURE__*/React.createElement("text", {
-    x: SC.sx(BOX.xmax) - 4,
-    y: SC.sy(0) - 8,
-    fontSize: "14",
-    fill: "#5B6472",
-    fontFamily: "Georgia, serif",
-    fontStyle: "italic",
-    textAnchor: "end"
-  }, "x"), /*#__PURE__*/React.createElement("text", {
-    x: SC.sx(0) + 10,
-    y: SC.sy(BOX.ymax) + 14,
-    fontSize: "14",
-    fill: "#5B6472",
-    fontFamily: "Georgia, serif",
-    fontStyle: "italic"
-  }, "y"), homogLine && /*#__PURE__*/React.createElement("line", {
-    x1: SC.sx(homogLine[0].x),
-    y1: SC.sy(homogLine[0].y),
-    x2: SC.sx(homogLine[1].x),
-    y2: SC.sy(homogLine[1].y),
-    stroke: COL.homog,
-    strokeWidth: "2",
-    strokeDasharray: "7 5",
-    opacity: "0.75"
-  }), inhomogLine && /*#__PURE__*/React.createElement("line", {
-    x1: SC.sx(inhomogLine[0].x),
-    y1: SC.sy(inhomogLine[0].y),
-    x2: SC.sx(inhomogLine[1].x),
-    y2: SC.sy(inhomogLine[1].y),
-    stroke: COL.inhomog,
-    strokeWidth: "2.6"
-  }), showDecomp && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Arrow, {
-    from: Ph,
-    to: Pi,
-    color: COL.p0,
-    width: 2.2,
-    markerId: "mk-p0",
-    dashed: true
-  }), Math.abs(t) > 0.15 && /*#__PURE__*/React.createElement("g", null, /*#__PURE__*/React.createElement("text", {
-    x: (SC.sx(Ph.x) + SC.sx(Pi.x)) / 2,
-    y: SC.sy(Ph.y) - 12,
-    fontSize: "12.5",
-    fill: COL.p0Dark,
-    fontFamily: "Georgia, serif",
-    fontStyle: "italic",
-    textAnchor: "middle"
-  }, "P", /*#__PURE__*/React.createElement("tspan", {
-    fontSize: "9",
-    dy: "3",
-    fontStyle: "normal"
-  }, "0")), /*#__PURE__*/React.createElement("text", {
-    x: (SC.sx(Ph.x) + SC.sx(Pi.x)) / 2 - 3,
-    y: SC.sy(Ph.y) - 23,
-    fontSize: "9.5",
-    fill: COL.p0Dark,
-    textAnchor: "middle"
-  }, "→")), /*#__PURE__*/React.createElement(Arrow, {
-    from: O,
-    to: P0,
-    color: COL.p0,
-    width: 3.4,
-    markerId: "mk-p0"
-  }), /*#__PURE__*/React.createElement("g", null, /*#__PURE__*/React.createElement("text", {
-    x: (SC.sx(0) + SC.sx(P0.x)) / 2,
-    y: (SC.sy(0) + SC.sy(P0.y)) / 2 - 10,
-    fontSize: "14",
-    fill: COL.p0Dark,
-    fontFamily: "Georgia, serif",
-    fontStyle: "italic",
-    textAnchor: "middle"
-  }, "P", /*#__PURE__*/React.createElement("tspan", {
-    fontSize: "10",
-    dy: "3",
-    fontStyle: "normal"
-  }, "0")), /*#__PURE__*/React.createElement("text", {
-    x: (SC.sx(0) + SC.sx(P0.x)) / 2 - 3.5,
-    y: (SC.sy(0) + SC.sy(P0.y)) / 2 - 22,
-    fontSize: "10",
-    fill: COL.p0Dark,
-    textAnchor: "middle"
-  }, "→")), Math.abs(t) > 0.15 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Arrow, {
-    from: O,
-    to: Ph,
-    color: COL.homog,
-    width: 3.2,
-    markerId: "mk-homog"
-  }), /*#__PURE__*/React.createElement("g", null, /*#__PURE__*/React.createElement("text", {
-    x: (SC.sx(O.x) + SC.sx(Ph.x)) / 2,
-    y: (SC.sy(O.y) + SC.sy(Ph.y)) / 2 + 27,
-    fontSize: "14",
-    fill: COL.homog,
-    fontFamily: "Georgia, serif",
-    fontStyle: "italic",
-    textAnchor: "middle"
-  }, "t·d"), /*#__PURE__*/React.createElement("text", {
-    x: (SC.sx(O.x) + SC.sx(Ph.x)) / 2 + 7,
-    y: (SC.sy(O.y) + SC.sy(Ph.y)) / 2 + 16,
-    fontSize: "10",
-    fill: COL.homog,
-    textAnchor: "middle"
-  }, "→")))), /*#__PURE__*/React.createElement("circle", {
-    cx: SC.sx(P0.x),
-    cy: SC.sy(P0.y),
-    r: "4",
-    fill: "#FFFFFF",
-    stroke: COL.p0Dark,
-    strokeWidth: "2"
-  }), /*#__PURE__*/React.createElement("circle", {
-    cx: SC.sx(0),
-    cy: SC.sy(0),
-    r: "3",
-    fill: COL.axis
-  }), /*#__PURE__*/React.createElement("circle", {
-    cx: SC.sx(Ph.x),
-    cy: SC.sy(Ph.y),
-    r: "6.5",
-    fill: COL.homog,
-    stroke: "#FFFFFF",
-    strokeWidth: "1.5"
-  }), /*#__PURE__*/React.createElement("circle", {
-    cx: SC.sx(Pi.x),
-    cy: SC.sy(Pi.y),
-    r: "6.5",
-    fill: COL.inhomog,
-    stroke: "#FFFFFF",
-    strokeWidth: "1.5"
-  }))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: 14,
-      margin: "8px 2px 0 2px",
-      fontSize: 12,
-      color: "#5B6472"
-    }
-  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: COL.homog
-    }
-  }, "●"), " Punkt ", /*#__PURE__*/React.createElement(Pt, {
-    letter: "P",
-    sub: "h"
-  }), " auf L", /*#__PURE__*/React.createElement("sub", null, "homogen")), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: COL.inhomog
-    }
-  }, "●"), " Punkt ", /*#__PURE__*/React.createElement(Pt, {
-    letter: "P"
-  }), " auf L (inhomogen)"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: COL.p0Dark
-    }
-  }, "○"), " ", /*#__PURE__*/React.createElement(Pt, {
-    letter: "P",
-    sub: "0"
-  }), " = spezielle Lösung (t = 0)")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 20
-    }
-  }, /*#__PURE__*/React.createElement("label", {
-    htmlFor: "lgsls-t",
-    style: {
-      fontSize: 15,
-      display: "block",
-      marginBottom: 6,
-      fontWeight: 600
-    }
-  }, "t = ", fmt(t)), /*#__PURE__*/React.createElement("input", {
-    id: "lgsls-t",
-    type: "range",
-    min: T_MIN,
-    max: T_MAX,
-    step: T_STEP,
-    value: t,
-    onChange: e => setT(parseFloat(e.target.value)),
-    "aria-label": "Parameter t",
-    style: {
-      width: "100%",
-      height: 44
-    }
-  })), /*#__PURE__*/React.createElement("label", {
+    style: headStyle
+  }, "Rekonstruiertes CT-Bild"), /*#__PURE__*/React.createElement(CtImage, {
+    solution: solution
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       alignItems: "center",
+      justifyContent: "center",
+      flexWrap: "wrap",
       gap: 10,
-      minHeight: 44,
-      fontSize: 15,
-      cursor: "pointer",
-      userSelect: "none"
+      marginTop: 10,
+      fontSize: wide ? 12 : 11.5,
+      color: COL.muted
     }
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "checkbox",
-    checked: showDecomp,
-    onChange: e => setShowDecomp(e.target.checked),
+  }, [0, 3, 6].map(v => /*#__PURE__*/React.createElement("span", {
+    key: v,
+    style: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 4
+    }
+  }, /*#__PURE__*/React.createElement("span", {
     style: {
       width: 20,
       height: 20,
-      flexShrink: 0
-    }
-  }), /*#__PURE__*/React.createElement("span", null, "Zerlegung zeigen: ", /*#__PURE__*/React.createElement(Vec, {
-    letter: "P",
-    sub: "0"
-  }), " + ", /*#__PURE__*/React.createElement("i", null, "t"), "·", /*#__PURE__*/React.createElement(Vec, {
-    letter: "d"
-  }))), /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-two",
-    style: {
-      marginTop: 12
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-tile",
-    style: {
-      background: "#EAF0F6",
-      border: "1px solid #B9CBDD"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-head",
-    style: {
-      color: COL.homog
-    }
-  }, "Punkt auf L", /*#__PURE__*/React.createElement("sub", null, "homogen")), /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-form",
-    style: {
-      color: COL.homog,
-      lineHeight: 1.8
-    }
-  }, /*#__PURE__*/React.createElement(Vec, {
-    letter: "P",
-    sub: "h"
-  }), " = ", /*#__PURE__*/React.createElement("i", null, "t"), "·", /*#__PURE__*/React.createElement(Vec, {
-    letter: "d"
-  })), /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-form",
-    style: {
-      display: "flex",
-      flexWrap: "wrap",
-      alignItems: "center",
-      columnGap: "0.3em",
-      color: COL.homog
-    }
-  }, /*#__PURE__*/React.createElement("span", null, "="), /*#__PURE__*/React.createElement(Term, null, /*#__PURE__*/React.createElement("span", null, fmt(t), "·"), /*#__PURE__*/React.createElement(ColVec, {
-    rows: [fmt(D.x), fmt(D.y)],
-    color: COL.homog
-  }))), /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-res",
-    style: {
-      color: COL.homog
-    }
-  }, /*#__PURE__*/React.createElement(Pt, {
-    letter: "P",
-    sub: "h"
-  }), fmtPair(Ph))), /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-tile",
-    style: {
-      background: "#FFF3E8",
-      border: "1px solid #F0CBA0"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-head",
-    style: {
-      color: COL.inhomogDark
-    }
-  }, "Punkt auf L (inhomogen)"), /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-form",
-    style: {
-      color: COL.inhomogDark,
-      lineHeight: 1.8
-    }
-  }, /*#__PURE__*/React.createElement(Vec, {
-    letter: "P"
-  }), " = ", /*#__PURE__*/React.createElement(Vec, {
-    letter: "P",
-    sub: "0"
-  }), " + ", /*#__PURE__*/React.createElement("i", null, "t"), "·", /*#__PURE__*/React.createElement(Vec, {
-    letter: "d"
-  })), /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-form",
-    style: {
-      display: "flex",
-      flexWrap: "wrap",
-      alignItems: "center",
-      columnGap: "0.3em",
-      color: COL.inhomogDark
-    }
-  }, /*#__PURE__*/React.createElement(Term, {
-    style: {
-      columnGap: "0.3em"
-    }
-  }, /*#__PURE__*/React.createElement("span", null, "="), /*#__PURE__*/React.createElement(ColVec, {
-    rows: [fmt(P0.x), fmt(P0.y)],
-    color: COL.inhomogDark
-  }), /*#__PURE__*/React.createElement("span", null, "+")), /*#__PURE__*/React.createElement(Term, null, /*#__PURE__*/React.createElement("span", null, fmtFactorAfterPlus(t)), /*#__PURE__*/React.createElement(ColVec, {
-    rows: [fmt(D.x), fmt(D.y)],
-    color: COL.inhomogDark
-  }))), /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-res",
-    style: {
-      color: COL.inhomogDark
-    }
-  }, /*#__PURE__*/React.createElement(Pt, {
-    letter: "P"
-  }), fmtPair(Pi)))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 16,
-      background: "#F1EFE8",
+      background: greyOf(v),
       border: `1px solid ${COL.frame}`,
-      borderRadius: 10,
-      padding: "12px 14px",
-      fontSize: 14,
-      lineHeight: 1.7
+      borderRadius: 3
     }
-  }, /*#__PURE__*/React.createElement("b", null, "Lösungen von inhomogenen LGS"), " sind von der Form „eine Lösung + alle Lösungen des homogenen LGS“. Addiert wird dabei zwischen ", /*#__PURE__*/React.createElement("b", null, "Vektoren"), ": ", /*#__PURE__*/React.createElement(Vec, {
-    letter: "P"
-  }), " = ", /*#__PURE__*/React.createElement(Vec, {
-    letter: "P",
-    sub: "0"
-  }), " + ", /*#__PURE__*/React.createElement("i", null, "t"), "·", /*#__PURE__*/React.createElement(Vec, {
-    letter: "d"
-  }), ". Egal welches t du wählst — der Verbindungsvektor vom blauen zum orangen Punkt bleibt immer derselbe, nämlich", " ", /*#__PURE__*/React.createElement(Vec, {
-    letter: "P",
-    sub: "0"
-  }), ". Setz das Häkchen bei „Zerlegung zeigen“, dann wird er eingezeichnet.")));
+  }), /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: COL.ink
+    }
+  }, v)))));
+  return /*#__PURE__*/React.createElement("div", {
+    ref: boxRef,
+    style: {
+      fontFamily: "-apple-system, system-ui, 'Segoe UI', sans-serif",
+      color: COL.ink,
+      background: COL.page,
+      padding: wide ? 14 : 10,
+      borderRadius: 12,
+      maxWidth: 1180,
+      margin: "0 auto",
+      boxSizing: "border-box"
+    }
+  }, /*#__PURE__*/React.createElement("style", null, `
+        .ct-cellbtn { cursor: pointer; outline: none; }
+        .ct-cellbtn:hover rect.ct-hover { fill: rgba(255,255,255,0.22); }
+        /* Fokusring zweifarbig: der aeussere weisse Ring traegt auch auf dem
+           dunkelblauen Hohlraum, wo ein blauer Ring nur 1.16:1 erreicht. */
+        .ct-cellbtn:focus-visible rect.ct-hitouter { stroke: #FFFFFF; }
+        .ct-cellbtn:focus-visible rect.ct-hit { stroke: #0B2B45; }
+        .ct-eqrow { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        .ct-eqrow:hover { background: #EDF0F4; border-left-color: #B9C0C9 !important; }
+        .ct-eqrow.ct-on:hover { background: ${COL.beamSoft}; }
+        .ct-eqrow:focus-visible { outline: 2px solid ${COL.accent}; outline-offset: 1px; }
+        .ct-btn { transition: filter 120ms; }
+        .ct-btn:hover { filter: brightness(0.96); }
+        .ct-btn:active { transform: translateY(1px); }
+      `), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexWrap: "wrap",
+      alignItems: "baseline",
+      gap: 8,
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: wide ? 17 : 15,
+      fontWeight: 700
+    }
+  }, "Computertomographie"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: wide ? 13 : 12,
+      color: COL.muted
+    }
+  }, "Neun Strahlen der Intensität ", I0, " durch einen 3×3-Schädelquerschnitt.")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: wide ? "minmax(0, 5fr) minmax(0, 6fr)" : "minmax(0, 1fr)",
+      gap: wide ? 14 : 10,
+      alignItems: "start"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: cardStyle
+  }, /*#__PURE__*/React.createElement("div", {
+    style: headStyle
+  }, "Schädelquerschnitt · Zelle antippen"), /*#__PURE__*/React.createElement("svg", {
+    viewBox: `0 0 ${VW} ${VH}`,
+    width: "100%",
+    style: {
+      display: "block",
+      height: "auto",
+      margin: "0 auto"
+    },
+    role: "group",
+    "aria-label": "Raster mit neun Gewebezellen"
+  }, cells.map((v, i) => {
+    const t = revealed[i] ? tissueOf(v) : HIDDEN;
+    return /*#__PURE__*/React.createElement("rect", {
+      key: i,
+      x: PADX + i % 3 * CELL,
+      y: PADY + Math.floor(i / 3) * CELL,
+      width: CELL,
+      height: CELL,
+      fill: t.fill,
+      stroke: t.stroke || "#FFFFFF",
+      strokeWidth: "2"
+    });
+  }), cells.map((v, i) => ray.cells.includes(i) ? null : /*#__PURE__*/React.createElement("rect", {
+    key: `dim${i}`,
+    x: PADX + i % 3 * CELL,
+    y: PADY + Math.floor(i / 3) * CELL,
+    width: CELL,
+    height: CELL,
+    fill: "#FFFFFF",
+    opacity: "0.5",
+    style: {
+      pointerEvents: "none"
+    }
+  })), /*#__PURE__*/React.createElement("g", {
+    style: {
+      pointerEvents: "none"
+    }
+  }, /*#__PURE__*/React.createElement("line", {
+    x1: beam.enter.x,
+    y1: beam.enter.y,
+    x2: beam.exit.x,
+    y2: beam.exit.y,
+    stroke: COL.beam,
+    strokeWidth: "2.5",
+    opacity: "0.42"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: beam.start.x,
+    y1: beam.start.y,
+    x2: beam.enter.x,
+    y2: beam.enter.y,
+    stroke: COL.beam,
+    strokeWidth: "3",
+    strokeLinecap: "round"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: beam.exit.x,
+    y1: beam.exit.y,
+    x2: beam.end.x - beam.ux * 7,
+    y2: beam.end.y - beam.uy * 7,
+    stroke: COL.beam,
+    strokeWidth: "3",
+    strokeLinecap: "butt"
+  }), /*#__PURE__*/React.createElement("polygon", {
+    points: beam.head,
+    fill: COL.beam
+  })), ray.cells.map(c => /*#__PURE__*/React.createElement("rect", {
+    key: `fr${c}`,
+    x: PADX + c % 3 * CELL + 1.5,
+    y: PADY + Math.floor(c / 3) * CELL + 1.5,
+    width: CELL - 3,
+    height: CELL - 3,
+    fill: "none",
+    stroke: COL.beam,
+    strokeWidth: "3",
+    style: {
+      pointerEvents: "none"
+    }
+  })), cells.map((v, i) => {
+    const hidden = !revealed[i];
+    const t = hidden ? HIDDEN : tissueOf(v);
+    const x = PADX + i % 3 * CELL;
+    const y = PADY + Math.floor(i / 3) * CELL;
+    const onRay = ray.cells.includes(i);
+    return /*#__PURE__*/React.createElement("g", {
+      key: `lbl${i}`,
+      className: "ct-cellbtn",
+      role: "button",
+      tabIndex: 0,
+      "aria-label": hidden ? `Zelle x${i + 1}, Gewebe unbekannt. Antippen deckt sie auf.` : `Zelle x${i + 1}, ${t.long}, Undurchlässigkeit ${v}. Antippen wechselt die Gewebeart.`,
+      onClick: () => cycle(i),
+      onKeyDown: e => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          cycle(i);
+        }
+      }
+    }, /*#__PURE__*/React.createElement("rect", {
+      className: "ct-hitouter",
+      x: x + 8,
+      y: y + 8,
+      width: CELL - 16,
+      height: CELL - 16,
+      fill: "none",
+      stroke: "none",
+      strokeWidth: "9"
+    }), /*#__PURE__*/React.createElement("rect", {
+      className: "ct-hit",
+      x: x + 8,
+      y: y + 8,
+      width: CELL - 16,
+      height: CELL - 16,
+      fill: "none",
+      stroke: "none",
+      strokeWidth: "4"
+    }), /*#__PURE__*/React.createElement("rect", {
+      className: "ct-hover",
+      x: x + 1,
+      y: y + 1,
+      width: CELL - 2,
+      height: CELL - 2,
+      fill: "transparent"
+    }), /*#__PURE__*/React.createElement("text", {
+      x: x + CELL / 2,
+      y: y + CELL / 2 + 11,
+      textAnchor: "middle",
+      fontSize: "31",
+      fontWeight: "700",
+      fill: hidden ? t.text : onRay ? t.text : DIM_INK,
+      style: {
+        pointerEvents: "none",
+        userSelect: "none"
+      }
+    }, hidden ? "?" : v), /*#__PURE__*/React.createElement("text", {
+      x: x + 8,
+      y: y + 26,
+      fontSize: "15",
+      fill: hidden ? t.markInk : onRay ? t.markInk : DIM_INK,
+      style: {
+        pointerEvents: "none",
+        userSelect: "none"
+      }
+    }, "x", SUBDIGITS[i + 1]));
+  }), /*#__PURE__*/React.createElement("g", {
+    style: {
+      pointerEvents: "none"
+    }
+  }, /*#__PURE__*/React.createElement("text", {
+    x: beam.start.x - beam.ux * 5,
+    y: beam.start.y - beam.uy * 5 + (beam.uy > 0.3 ? -3 : 6),
+    textAnchor: beam.ux > 0.3 ? "end" : beam.ux < -0.3 ? "start" : "middle",
+    fontSize: "16",
+    fontWeight: "700",
+    fill: COL.beam
+  }, I0), /*#__PURE__*/React.createElement("text", {
+    x: beam.end.x + beam.ux * 5,
+    y: beam.end.y + beam.uy * 5 + (beam.uy > 0.3 ? 16 : 6),
+    textAnchor: beam.ux > 0.3 ? "start" : beam.ux < -0.3 ? "end" : "middle",
+    fontSize: "16",
+    fontWeight: "700",
+    fill: COL.beam
+  }, measured[selected]))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: wide ? 12.5 : 11.5,
+      color: COL.muted,
+      textAlign: "center",
+      marginTop: 4
+    }
+  }, "Strahl ", /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: COL.beam
+    }
+  }, "(", selected + 1, ")"), ", Gerade", " ", /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: COL.beam
+    }
+  }, ray.label), ", durch", " ", ray.cells.map((c, k) => /*#__PURE__*/React.createElement("span", {
+    key: c
+  }, k > 0 && ", ", /*#__PURE__*/React.createElement("i", {
+    style: {
+      fontStyle: "italic"
+    }
+  }, "x"), /*#__PURE__*/React.createElement("sub", {
+    style: {
+      fontSize: "0.75em"
+    }
+  }, c + 1))), " — ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      whiteSpace: "nowrap"
+    }
+  }, I0, " − ", rhs[selected], " =", " ", /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: COL.ink
+    }
+  }, measured[selected]))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: `repeat(${legCols}, max-content)`,
+      justifyContent: "center",
+      gap: wide ? "6px 16px" : "5px 8px",
+      marginTop: 10,
+      fontSize: wide ? 12.5 : 11.5,
+      color: COL.muted
+    }
+  }, legendeVerdeckt && /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 5
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 15,
+      height: 15,
+      borderRadius: 3,
+      background: HIDDEN.fill,
+      border: `1px solid ${HIDDEN.stroke}`,
+      flex: "0 0 auto"
+    }
+  }), /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: COL.ink
+    }
+  }, "?"), " unbekannt"), TISSUES.map(t => /*#__PURE__*/React.createElement("span", {
+    key: t.v,
+    style: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 5
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 15,
+      height: 15,
+      borderRadius: 3,
+      background: t.fill,
+      border: `1px solid ${COL.frame}`,
+      flex: "0 0 auto"
+    }
+  }), /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: COL.ink
+    }
+  }, t.v), "\xA0", legLang ? t.long : t.short))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      marginTop: 10
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "ct-btn",
+    onClick: randomise,
+    style: btnStyle(false)
+  }, "Zufallsschädel"), /*#__PURE__*/React.createElement("button", {
+    className: "ct-btn",
+    onClick: clear,
+    style: btnStyle(false)
+  }, "Leeren"))), /*#__PURE__*/React.createElement("div", {
+    style: cardStyle
+  }, /*#__PURE__*/React.createElement("div", {
+    style: headStyle
+  }, "Das Gleichungssystem · Zeile antippen zeigt den Strahl"), /*#__PURE__*/React.createElement(EquationTable, {
+    rhs: rhs,
+    measured: measured,
+    selected: selected,
+    onSelect: setSelected,
+    wide: wide,
+    narrow: narrow,
+    compact: compact,
+    boxW: boxW
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "center",
+      margin: wide ? "14px 0 0" : "10px 0 0"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "ct-btn",
+    onClick: toggleSolution,
+    style: btnStyle(true),
+    "aria-expanded": showSolution
+  }, showSolution ? "Lösung verbergen" : "Lösung anzeigen")), showSolution && /*#__PURE__*/React.createElement("div", {
+    ref: solutionRef,
+    style: {
+      display: "grid",
+      gridTemplateColumns: wide ? "minmax(0, 6fr) minmax(0, 5fr)" : "minmax(0, 1fr)",
+      gap: wide ? 14 : 10,
+      marginTop: wide ? 14 : 10,
+      alignItems: "start"
+    }
+  }, wide ? /*#__PURE__*/React.createElement(React.Fragment, null, solutionCard, imageCard) : /*#__PURE__*/React.createElement(React.Fragment, null, imageCard, solutionCard)));
 }
-ReactDOM.createRoot(document.getElementById("app-lgs-loesungsstruktur")).render(React.createElement(LgsLoesungsstruktur));  } catch (err) {
-    var mount = document.getElementById("app-lgs-loesungsstruktur");
+
+// ---------- Knopf-Stil --------------------------------------------------------
+function btnStyle(primary) {
+  return {
+    minHeight: 44,
+    padding: "0 18px",
+    fontSize: 14,
+    fontWeight: 600,
+    fontFamily: "inherit",
+    color: primary ? "#FFFFFF" : COL.ink,
+    background: primary ? COL.accent : "#FFFFFF",
+    border: `1px solid ${primary ? COL.accent : COL.frame}`,
+    borderRadius: 9,
+    cursor: "pointer"
+  };
+}
+
+// ---------- LGS in Standardform ----------------------------------------------
+// Jede Termspalte besteht aus ZWEI Feldern: rechtsbuendig das Vorzeichen,
+// linksbuendig das x_i. Sonst wandert das x um knapp 4px, je nachdem ob ein
+// "+" davorsteht (im Review gemessen) -- und damit waere genau das verfehlt,
+// wofuer die Standardform ueberhaupt gewaehlt wurde.
+function EquationTable({
+  rhs,
+  measured,
+  selected,
+  onSelect,
+  wide,
+  narrow,
+  compact,
+  boxW
+}) {
+  // Alle Masse haengen STETIG an der Kartenbreite, nicht sprunghaft an `wide`.
+  // Vorher stieg der Schriftgrad genau dann von 11.5 auf 13, wenn die Karte
+  // beim Umbruch auf 6/11 der Breite schrumpfte -- die neun Termspalten
+  // unterschritten dort ihren Inhalt, das Pluszeichen klebte am Index des
+  // vorangehenden Terms ("x1+ x2+ x3"). Charakteristisch war die Richtung des
+  // Fehlers: breiter machen verschlechterte das Bild (Review-Befund Runde 9).
+  // Die Schwelle zu verschieben half nicht, sie nahm den Fehler mit; erst die
+  // stetige Kopplung loest ihn.
+  const eqAvail = (wide ? boxW * 0.545 : boxW) - 46;
+  const fs = compact ? narrow ? 11 : 11.5 : Math.max(9.8, Math.min(13, eqAvail / 39));
+  const nrW = Math.round(fs * 3.1);
+  const eqW = Math.round(fs * 1.1);
+  const rhsW = Math.round(fs * 2);
+  const measW = Math.round(fs * 3.4);
+  const opW = Math.max(7, Math.round(fs * 0.9));
+  const zeigeMess = eqAvail >= 330;
+  // Radiogroup-Bedienung: eine Zeile im Tabstopp, Auswahl mit den Pfeiltasten
+  // (ARIA-Muster fuer role="radio"; ohne das waeren es neun Tabstopps und die
+  // Pfeiltasten taeten nichts -- Review-Befund der zweiten Runde).
+  const moveSelection = (e, i) => {
+    const last = RAYS.length - 1;
+    let next = null;
+    if (e.key === "ArrowDown" || e.key === "ArrowRight") next = i === last ? 0 : i + 1;else if (e.key === "ArrowUp" || e.key === "ArrowLeft") next = i === 0 ? last : i - 1;else if (e.key === "Home") next = 0;else if (e.key === "End") next = last;else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onSelect(i);
+      return;
+    }
+    if (next === null) return;
+    e.preventDefault();
+    onSelect(next);
+    const el = e.currentTarget.parentElement.querySelector(`[data-eqrow="${next}"]`);
+    if (el) el.focus();
+  };
+  const cols = compact ? `${nrW}px minmax(0, 1fr) ${measW}px` : `${nrW}px repeat(9, minmax(0, 1fr)) ${eqW}px ${rhsW}px` + (zeigeMess ? ` ${measW}px` : "");
+  const eqSpan = compact ? 1 : 11;
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: fs
+    },
+    role: "radiogroup",
+    "aria-label": "Die neun Strahlen"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: cols,
+      alignItems: "end",
+      fontSize: Math.max(9.5, fs - 2),
+      color: COL.muted,
+      paddingBottom: 4,
+      borderBottom: `1px solid ${COL.frame}`
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "center"
+    }
+  }, "Strahl"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      gridColumn: `2 / span ${eqSpan}`,
+      paddingLeft: 10
+    }
+  }, "Gleichung"), (compact || zeigeMess) && /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "right",
+      whiteSpace: "nowrap",
+      marginLeft: -24
+    }
+  }, "gemessen")), RAYS.map((r, i) => {
+    const on = i === selected;
+    const eqText = r.cells.map(c => `x${c + 1}`).join(" + ") + " = " + rhs[i];
+    return /*#__PURE__*/React.createElement("div", {
+      key: r.id,
+      className: `ct-eqrow${on ? " ct-on" : ""}`,
+      role: "radio",
+      "data-eqrow": i,
+      tabIndex: on ? 0 : -1,
+      "aria-checked": on,
+      "aria-label": `Strahl ${i + 1}, Gerade ${r.label} zur Waagrechten. Gleichung ${eqText}. Gemessene Intensität ${measured[i]}.`,
+      onClick: () => onSelect(i),
+      onKeyDown: e => moveSelection(e, i),
+      style: {
+        display: "grid",
+        gridTemplateColumns: cols,
+        alignItems: "center",
+        minHeight: 44,
+        background: on ? COL.beamSoft : "transparent",
+        borderRadius: 7,
+        borderLeft: `3px solid ${on ? COL.beam : "transparent"}`,
+        paddingLeft: 2,
+        marginTop: 4
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: "center",
+        fontSize: Math.max(10.5, fs - 1),
+        fontWeight: 700,
+        color: on ? COL.beam : COL.muted,
+        whiteSpace: "nowrap"
+      }
+    }, "(", i + 1, ")\xA0", r.glyph), compact ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        paddingLeft: 10,
+        whiteSpace: "nowrap"
+      }
+    }, r.cells.map((c, k) => /*#__PURE__*/React.createElement("span", {
+      key: c
+    }, k > 0 && /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: COL.muted
+      }
+    }, " + "), /*#__PURE__*/React.createElement("i", {
+      style: {
+        fontStyle: "italic"
+      }
+    }, "x"), /*#__PURE__*/React.createElement("sub", {
+      style: {
+        fontSize: "0.72em"
+      }
+    }, c + 1))), /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: COL.muted
+      }
+    }, " = "), /*#__PURE__*/React.createElement("b", null, rhs[i])) : Array.from({
+      length: 9
+    }, (_, c) => {
+      if (MATRIX[i][c] !== 1) return /*#__PURE__*/React.createElement("div", {
+        key: c
+      });
+      const isFirst = r.cells[0] === c;
+      return /*#__PURE__*/React.createElement("div", {
+        key: c,
+        style: {
+          display: "grid",
+          gridTemplateColumns: `${opW}px auto`,
+          alignItems: "baseline",
+          justifyContent: "center",
+          whiteSpace: "nowrap"
+        }
+      }, /*#__PURE__*/React.createElement("span", {
+        style: {
+          color: COL.muted,
+          textAlign: "right",
+          paddingRight: narrow ? 2 : 3
+        }
+      }, isFirst ? "" : "+"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("i", {
+        style: {
+          fontStyle: "italic"
+        }
+      }, "x"), /*#__PURE__*/React.createElement("sub", {
+        style: {
+          fontSize: "0.72em"
+        }
+      }, c + 1)));
+    }), !compact && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: "center",
+        color: COL.muted
+      }
+    }, "="), /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: "right",
+        fontWeight: 700
+      }
+    }, rhs[i])), (compact || zeigeMess) && /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: "right",
+        color: COL.muted,
+        fontSize: Math.max(9.5, fs - 1.5),
+        marginLeft: 10,
+        paddingLeft: 10
+      }
+    }, measured[i]));
+  }));
+}
+
+// ---------- Stufenform der erweiterten Koeffizientenmatrix -------------------
+// Statt des Loesungsvektors (cr, 2026-09-04): Was hier steht, ist das Ergebnis
+// der Gauss-Elimination -- der Schritt, den die Klasse selbst macht. Das
+// Rueckwaertseinsetzen von der letzten Zeile her bleibt ihr ueberlassen; das
+// Bild daneben zeigt, was dabei herauskommt.
+function StufenformMatrix({
+  zsf,
+  wide,
+  boxW
+}) {
+  if (!zsf) return null;
+  const {
+    rows,
+    pivots
+  } = zsf;
+  const n = 9;
+  // So gross wie die Karte es zulaesst (cr, 2026-09-04: "stufenform groesser
+  // machen"). Die Karte ist im breiten Layout 6 von 11 Spalten, im schmalen
+  // die volle Breite; davon gehen Kartenpolsterung und Aussenabstand ab.
+  // Die Matrix braucht 9 Zellen + Trennstrich + rechte Seite (~1.5 Zellen)
+  // + zwei Klammern.
+  const avail = (wide ? boxW * 0.545 : boxW) - (wide ? 54 : 38);
+  const paren = wide ? 15 : 12;
+  const cell = Math.max(16, Math.min(38, (avail - 2 * paren - 6) / 11.35));
+  const fs = Math.round(cell * 0.62 * 10) / 10;
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "center"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "relative",
+      padding: `10px ${paren + 4}px`
+    }
+  }, /*#__PURE__*/React.createElement(VecParen, {
+    side: "left",
+    width: paren
+  }), /*#__PURE__*/React.createElement(VecParen, {
+    side: "right",
+    width: paren
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: `repeat(${n}, ${cell}px) ${Math.round(cell * 0.5)}px ${Math.round(cell * 1.5)}px`,
+      rowGap: 0,
+      fontSize: fs,
+      fontVariantNumeric: "tabular-nums"
+    }
+  }, rows.map((row, r) => /*#__PURE__*/React.createElement(React.Fragment, {
+    key: r
+  }, row.slice(0, n).map((v, c) => {
+    const isPivot = pivots[r] === c;
+    return /*#__PURE__*/React.createElement("span", {
+      key: c,
+      style: {
+        textAlign: "right",
+        paddingRight: 2,
+        lineHeight: `${Math.round(cell * 1.18)}px`,
+        color: v === 0 ? "#6E7682" : COL.ink,
+        fontWeight: isPivot ? 700 : 400
+      }
+    }, v);
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      borderLeft: `1px solid #8A93A0`,
+      marginLeft: Math.round(cell * 0.22)
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      textAlign: "right",
+      fontWeight: 700,
+      lineHeight: `${Math.round(cell * 1.18)}px`
+    }
+  }, row[n]))))));
+}
+
+// ---------- rekonstruiertes CT-Bild ------------------------------------------
+// Die Zellen sind eingerueckt, damit der dunkle Grund als Rahmen und als
+// Fugenkreuz sichtbar wird. Vorher lagen Trennlinien in #101216 auf einem
+// Grauwert 26 -- bei "Leeren" zerfiel das Bild zu einem schwarzen Quadrat
+// (Kontrast 1.08:1, Review-Befund).
+function CtImage({
+  solution
+}) {
+  if (!solution) return null;
+  const vals = solution.map(f => f.n / f.d);
+  const labels = solution.map(fracText);
+  const S = 92;
+  const GAP = 5;
+  const EDGE = 9;
+  const W = 3 * S + 2 * GAP + 2 * EDGE;
+  return /*#__PURE__*/React.createElement("svg", {
+    viewBox: `0 0 ${W} ${W}`,
+    width: "100%",
+    style: {
+      display: "block",
+      height: "auto",
+      maxWidth: 320,
+      margin: "0 auto"
+    },
+    role: "img",
+    "aria-label": `Rekonstruiertes CT-Bild in Graustufen. Zeile 1: ${labels.slice(0, 3).join(", ")}. Zeile 2: ${labels.slice(3, 6).join(", ")}. Zeile 3: ${labels.slice(6, 9).join(", ")}.`
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "0",
+    y: "0",
+    width: W,
+    height: W,
+    fill: "#6E7480",
+    rx: "4"
+  }), vals.map((v, i) => {
+    const x = EDGE + i % 3 * (S + GAP);
+    const y = EDGE + Math.floor(i / 3) * (S + GAP);
+    return /*#__PURE__*/React.createElement("g", {
+      key: i
+    }, /*#__PURE__*/React.createElement("rect", {
+      x: x,
+      y: y,
+      width: S,
+      height: S,
+      fill: greyOf(v)
+    }), /*#__PURE__*/React.createElement("text", {
+      x: x + S / 2,
+      y: y + S / 2 + 9,
+      textAnchor: "middle",
+      fontSize: "26",
+      fontWeight: "700",
+      fill: greyText(v),
+      style: {
+        userSelect: "none"
+      }
+    }, labels[i]));
+  }));
+}
+ReactDOM.createRoot(document.getElementById("app-ct-tomographie-lgs")).render(React.createElement(CtTomographieLgs));  } catch (err) {
+    var mount = document.getElementById("app-ct-tomographie-lgs");
     if (mount) {
       mount.innerHTML = '<p style="color:#9B2C2C;font-size:13px;">Fehler beim Rendern: ' +
         (err && err.message ? err.message.replace(/</g, "&lt;") : String(err)) + '</p>';
     }
-    console.error("build_preview.sh-Vorschau: Renderfehler in lgs-loesungsstruktur", err);
+    console.error("build_preview.sh-Vorschau: Renderfehler in ct-tomographie-lgs", err);
   }
 })();
 </script>

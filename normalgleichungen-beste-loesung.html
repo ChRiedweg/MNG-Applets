@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Beste Lösung und Normalgleichungen — Applet</title>
+<title>Normalgleichungen — die beste Lösung</title>
 <style>
   html, body { margin: 0; padding: 0; font-family: -apple-system, system-ui, sans-serif; background: #F7F8FA; }
-#app-mount-wrap { padding: 12px; }
+  #app-mount-wrap { padding: 12px; }
 </style>
 <script>
 /**
@@ -418,6 +418,28 @@ const {
 //     keine Spaltenvektoren; ebenso Koordinatenangaben von Punkten und
 //     Loesungstupel. Ein T dort waere falsch.
 //  ---------------------------------------------------------------------------
+//  SCHLANKER STAND OHNE ERKLAERTEXTE (cr, 2026-09-05):
+//  Zielstil wie beim Entscheid zu ct-tomographie-lgs: "kein Erklaertext im
+//  Applet — schlank hier, Theorie woanders, Erklaerungen muendlich." Anders als
+//  dort (dort ersatzlos gestrichen) ist der Umbau hier RUECKBAUBAR ueber die
+//  eine Konstante SCHLANK weiter unten, im selben Stil wie
+//  ZEIGE_QUADRAT_KASTEN: Kein Text wird geloescht, jeder Erklaerblock bleibt
+//  vollstaendig im Quelltext stehen und wird nur hinter "{!SCHLANK && (...)}"
+//  bzw. per Ternaer gestellt. SCHLANK = false bringt den fruehren, ausfuehr-
+//  lichen Stand exakt und vollstaendig zurueck. Betroffen (Einzelheiten je an
+//  der Stelle im Code): die Einleitungs- und Notiz-Absaetze aller drei
+//  Schritte, die Prosa in den MeasureBar-Notizen und im Ketten-Kasten von
+//  Schritt 2, der lange Fliesstext im Aufloese-Kasten von Schritt 3 (die
+//  Matrix, die Loesung x1=1/7/x2=1/3 und die Q-Identitaet bleiben als Formel
+//  mit hoechstens einem Stichwort stehen) sowie der Konventions-Satz zum
+//  Vorzeichen des Fehlervektors in der Fusszeile. NICHT betroffen: Titel,
+//  Schrittleiste, beide Grafiken, beide Regler samt Snap-Verhalten, der
+//  Q-Balken samt seinen Marken, die Checkboxen, die Zahlenzeile
+//  "Q = ... + ... + ..." und die beiden Knoepfe — die bleiben unveraendert
+//  sichtbar. Der Statustext unter den beiden DotGauge in Schritt 3 ist davon
+//  unabhaengig dauerhaft (nicht hinter dem Schalter) auf je einen Satz gekuerzt
+//  worden: er ist Rueckmeldung auf die Reglerbewegung, kein Erklaertext.
+//  ---------------------------------------------------------------------------
 // =============================================================================
 
 // ---------- feste mathematische Daten (identisch zum Skript) -----------------
@@ -494,6 +516,12 @@ const LEN_MAX_BAR = Math.sqrt(Q_MAX_BAR); // = 2.7203
 // ausserhalb des Kastens verweist auf die beiden Balken (geprueft), es musste
 // also nichts umformuliert werden.
 const ZEIGE_QUADRAT_KASTEN = false;
+
+// RUECKBAUBAR ABGESCHALTET (cr, 2026-09-05): schlanke Fassung ohne
+// Erklaertexte — Begruendung und Reichweite im Kopfkommentar ("SCHLANKER
+// STAND OHNE ERKLAERTEXTE"). Schalter auf false = alter, ausfuehrlicher Stand
+// vollstaendig zurueck.
+const SCHLANK = true;
 
 // ---------- Farben: Farbe kodiert Bedeutung ---------------------------------
 // x1 / w1 / Steigung  = orange   ·   x2 / w2 / Achsenabschnitt = grün
@@ -1752,7 +1780,7 @@ function NormalgleichungenBesteLoesung() {
     zeroLabel: "Q = 0",
     maxLabel: num(Q_MAX_BAR, 1),
     marks: qMarks,
-    note: /*#__PURE__*/React.createElement("span", null, shownBest !== null ? /*#__PURE__*/React.createElement("span", null, "Schwarzer Strich: Ihr bisher kleinstes Q = ", num(shownBest), ".", " ") : /*#__PURE__*/React.createElement("span", null, "Schieben Sie die Regler — der schwarze Strich merkt sich Ihr kleinstes Q. "), revealed ? /*#__PURE__*/React.createElement("span", null, "Grüner Strich: das kleinstmögliche Q = ", num(Q_MIN), ".") : null)
+    note: SCHLANK ? null : /*#__PURE__*/React.createElement("span", null, shownBest !== null ? /*#__PURE__*/React.createElement("span", null, "Schwarzer Strich: Ihr bisher kleinstes Q = ", num(shownBest), ".", " ") : /*#__PURE__*/React.createElement("span", null, "Schieben Sie die Regler — der schwarze Strich merkt sich Ihr kleinstes Q. "), revealed ? /*#__PURE__*/React.createElement("span", null, "Grüner Strich: das kleinstmögliche Q = ", num(Q_MIN), ".") : null)
   });
 
   // Ein und dieselben zwei Zahlen, zwei Benennungen: in Schritt 1 die Gerade
@@ -1844,10 +1872,10 @@ function NormalgleichungenBesteLoesung() {
       fontFamily: "Georgia, 'Times New Roman', serif",
       fontSize: 24,
       fontWeight: 700,
-      margin: "0 0 4px 0",
+      margin: SCHLANK ? "0 0 16px 0" : "0 0 4px 0",
       letterSpacing: "-0.01em"
     }
-  }, "Die beste Lösung eines unlösbaren LGS"), /*#__PURE__*/React.createElement("p", {
+  }, "Die beste Lösung eines unlösbaren LGS"), !SCHLANK && /*#__PURE__*/React.createElement("p", {
     style: {
       fontSize: 13.5,
       color: COL.muted,
@@ -1889,7 +1917,7 @@ function NormalgleichungenBesteLoesung() {
     style: {
       fontWeight: 700
     }
-  }, s.n), /*#__PURE__*/React.createElement("br", null), s.t))), step === 1 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
+  }, s.n), /*#__PURE__*/React.createElement("br", null), s.t))), step === 1 && /*#__PURE__*/React.createElement("div", null, !SCHLANK && /*#__PURE__*/React.createElement("p", {
     style: pStyle
   }, "Die Gerade ", /*#__PURE__*/React.createElement("em", null, "y"), " = ", /*#__PURE__*/React.createElement(MSym, null, "m"), "·", /*#__PURE__*/React.createElement("em", null, "x"), " + ", /*#__PURE__*/React.createElement(MSym, null, "q"), " soll durch die drei Messpunkte gehen. Das verlangt drei Gleichungen für zwei Unbekannte — und keine Wahl von", " ", /*#__PURE__*/React.createElement(MSym, null, "m"), ", ", /*#__PURE__*/React.createElement(MSym, null, "q"), " erfüllt alle drei.", " ", /*#__PURE__*/React.createElement("strong", null, "Machen Sie stattdessen den Fehler so klein wie möglich:"), " Q ist die Summe der quadrierten Abweichungen. Wie klein bekommen Sie Q?"), /*#__PURE__*/React.createElement("div", {
     style: card
@@ -1898,7 +1926,7 @@ function NormalgleichungenBesteLoesung() {
     x2: x2,
     resid: resid,
     showSquares: showSquares,
-    showWrong: showWrong
+    showWrong: !SCHLANK && showWrong
   })), params("mq"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -1925,7 +1953,7 @@ function NormalgleichungenBesteLoesung() {
       height: 20,
       flexShrink: 0
     }
-  }), "Quadrate zeichnen"), /*#__PURE__*/React.createElement("label", {
+  }), "Quadrate zeichnen"), !SCHLANK && /*#__PURE__*/React.createElement("label", {
     style: {
       fontSize: 14,
       display: "flex",
@@ -1943,15 +1971,18 @@ function NormalgleichungenBesteLoesung() {
       height: 20,
       flexShrink: 0
     }
-  }), "Abstand zur Geraden vergleichen")), /*#__PURE__*/React.createElement("p", {
+  }), "Abstand zur Geraden vergleichen")), !SCHLANK && /*#__PURE__*/React.createElement("p", {
     style: noteStyle
   }, "Gemessen wird ", /*#__PURE__*/React.createElement("strong", null, "in y-Richtung"), ": Abweichung = Geradenwert − Messwert. Die grau gestrichelten Strecken zeigen zum Vergleich den Abstand ", /*#__PURE__*/React.createElement("em", null, "senkrecht zur Geraden"), " ", "— eine andere Grösse, die hier ausdrücklich ", /*#__PURE__*/React.createElement("em", null, "nicht"), " gemeint ist. Q addiert die Quadrate der roten Strecken: deren Flächen sehen Sie im Bild."), /*#__PURE__*/React.createElement("p", {
     style: {
       ...noteStyle,
       color: COL.ink,
-      fontFamily: "ui-monospace, Menlo, monospace"
+      fontFamily: "ui-monospace, Menlo, monospace",
+      marginTop: SCHLANK ? 12 : 10
     }
-  }, "Q = ", sq(resid[0]), " + ", sq(resid[1]), " + ", sq(resid[2]), " = ", num(Q))), step === 2 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
+  }, "Q = ", sq(resid[0]), " + ", sq(resid[1]), " + ", sq(resid[2]), " = ", num(Q))), step === 2 && /*#__PURE__*/React.createElement("div", null, SCHLANK ? /*#__PURE__*/React.createElement("p", {
+    style: pStyle
+  }, "(", /*#__PURE__*/React.createElement(MSym, null, "m"), " heisst ab hier x₁, ", /*#__PURE__*/React.createElement(MSym, null, "q"), " heisst x₂.)") : /*#__PURE__*/React.createElement("p", {
     style: pStyle
   }, "Gesucht sind x₁ und x₂ mit x₁·", /*#__PURE__*/React.createElement(VecSym, {
     l: "w",
@@ -1999,7 +2030,7 @@ function NormalgleichungenBesteLoesung() {
     len: len,
     showPerp: false,
     isPerp: isPerp
-  })), /*#__PURE__*/React.createElement("p", {
+  })), !SCHLANK && /*#__PURE__*/React.createElement("p", {
     style: {
       ...noteStyle,
       marginTop: 6
@@ -2054,7 +2085,7 @@ function NormalgleichungenBesteLoesung() {
     }
   }, "Q = ", num(len), "² = ", num(Q))), /*#__PURE__*/React.createElement("div", {
     style: boxStyle
-  }, /*#__PURE__*/React.createElement("div", {
+  }, !SCHLANK && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 14,
       color: COL.ink,
@@ -2096,7 +2127,7 @@ function NormalgleichungenBesteLoesung() {
     side: "left"
   }), /*#__PURE__*/React.createElement("span", null, num(resid[0])), /*#__PURE__*/React.createElement("span", null, num(resid[1])), /*#__PURE__*/React.createElement("span", null, num(resid[2])), /*#__PURE__*/React.createElement(VecParen, {
     side: "right"
-  })), /*#__PURE__*/React.createElement("span", {
+  })), !SCHLANK && /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 13,
       color: COL.muted,
@@ -2144,14 +2175,14 @@ function NormalgleichungenBesteLoesung() {
       fontWeight: 700,
       color: COL.err
     }
-  }, num(Q))), /*#__PURE__*/React.createElement("div", {
+  }, num(Q))), !SCHLANK && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 13,
       color: COL.muted,
       marginTop: 10,
       lineHeight: 1.5
     }
-  }, "Für die Suche nach dem Minimum ist es gleichgültig, ob man die Länge oder ihr Quadrat klein macht: Wo das eine am kleinsten ist, ist es auch das andere. Gerechnet wird mit Q, weil dort keine Wurzel steht."))), step === 3 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
+  }, "Für die Suche nach dem Minimum ist es gleichgültig, ob man die Länge oder ihr Quadrat klein macht: Wo das eine am kleinsten ist, ist es auch das andere. Gerechnet wird mit Q, weil dort keine Wurzel steht."))), step === 3 && /*#__PURE__*/React.createElement("div", null, !SCHLANK && /*#__PURE__*/React.createElement("p", {
     style: pStyle
   }, "Sie haben es probiert: Unter einen bestimmten Wert kommen Sie nicht. Was ist an dieser Stelle besonders? Beobachten Sie die beiden Skalarprodukte des Fehlervektors mit den Spalten."), /*#__PURE__*/React.createElement("div", {
     style: card
@@ -2161,7 +2192,7 @@ function NormalgleichungenBesteLoesung() {
     len: len,
     showPerp: true,
     isPerp: isPerp
-  })), /*#__PURE__*/React.createElement("p", {
+  })), !SCHLANK && /*#__PURE__*/React.createElement("p", {
     style: {
       ...noteStyle,
       marginTop: 6
@@ -2215,7 +2246,7 @@ function NormalgleichungenBesteLoesung() {
       color: isPerp ? COL.ok : COL.ink,
       marginTop: 4
     }
-  }, isPerp ? "Beide Skalarprodukte sind null — der Fehlervektor steht senkrecht auf der Ebene, und die Länge ist zugleich am kleinsten." : ok1 || ok2 ? "Eines der beiden Skalarprodukte ist null (✓) — auf der richtigen Spur. Das andere ist es noch nicht: In dieser Richtung hat der Fehlervektor noch einen Anteil, der in der Ebene liegt." : "Noch nicht null: Der Fehlervektor hat noch einen Anteil, der in der Ebene liegt — und genau dieser Anteil macht ihn unnötig lang.")), /*#__PURE__*/React.createElement("div", {
+  }, isPerp ? "Beide Skalarprodukte sind null — die Länge ist jetzt minimal." : ok1 || ok2 ? "Eines der beiden ist schon null, das andere noch nicht." : "Noch ist keines der beiden Skalarprodukte null.")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 10,
@@ -2234,7 +2265,7 @@ function NormalgleichungenBesteLoesung() {
   }, "Zur besten Lösung springen"), /*#__PURE__*/React.createElement("button", {
     onClick: reset,
     style: BTN
-  }, "Zurücksetzen")), moves < 8 && !revealed && /*#__PURE__*/React.createElement("p", {
+  }, "Zurücksetzen")), !SCHLANK && moves < 8 && !revealed && /*#__PURE__*/React.createElement("p", {
     style: noteStyle
   }, "Probieren Sie zuerst selbst — der Knopf ist erst interessant, wenn Sie wissen, wie schwer es ist, unter Ihren eigenen Rekord zu kommen."), revealed && /*#__PURE__*/React.createElement("div", {
     style: {
@@ -2246,7 +2277,63 @@ function NormalgleichungenBesteLoesung() {
       fontSize: 15,
       lineHeight: 1.6
     }
-  }, /*#__PURE__*/React.createElement("strong", null, "Warum genau hier?"), /*#__PURE__*/React.createElement("p", {
+  }, SCHLANK ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 14,
+      color: COL.ink,
+      marginBottom: 6
+    }
+  }, "Normalgleichungen [ A", /*#__PURE__*/React.createElement("sup", null, "T"), "A | A", /*#__PURE__*/React.createElement("sup", null, "T"), /*#__PURE__*/React.createElement(VecSym, {
+    l: "b"
+  }), " ]:"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "center",
+      fontFamily: "ui-monospace, Menlo, monospace",
+      fontSize: 15,
+      margin: "10px 0"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      borderLeft: `2px solid ${COL.ink}`,
+      borderTop: `2px solid ${COL.ink}`,
+      borderBottom: `2px solid ${COL.ink}`,
+      width: 7
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      padding: "4px 10px",
+      lineHeight: 1.7
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "block"
+    }
+  }, "14\xA0\xA0\xA00\xA0\xA0|\xA0\xA02"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "block"
+    }
+  }, "\xA00\xA0\xA0\xA03\xA0\xA0|\xA0\xA01")), /*#__PURE__*/React.createElement("span", {
+    style: {
+      borderRight: `2px solid ${COL.ink}`,
+      borderTop: `2px solid ${COL.ink}`,
+      borderBottom: `2px solid ${COL.ink}`,
+      width: 7
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 15,
+      color: COL.ink,
+      margin: "10px 0"
+    }
+  }, "Lösung: x₁ = 1/7 ≈ 0.143, x₂ = 1/3 ≈ 0.333 — Ausgleichsgerade ", /*#__PURE__*/React.createElement("em", null, "y"), " =", " ", /*#__PURE__*/React.createElement("sup", null, "1"), "⁄", /*#__PURE__*/React.createElement("sub", null, "7"), /*#__PURE__*/React.createElement("em", null, "x"), " + ", /*#__PURE__*/React.createElement("sup", null, "1"), "⁄", /*#__PURE__*/React.createElement("sub", null, "3"), "."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "center",
+      fontSize: 15,
+      margin: "8px 0 0 0",
+      fontFamily: "Georgia, serif"
+    }
+  }, "Q = 14·(x₁ − ", /*#__PURE__*/React.createElement("sup", null, "1"), "⁄", /*#__PURE__*/React.createElement("sub", null, "7"), ")² + 3·(x₂ − ", /*#__PURE__*/React.createElement("sup", null, "1"), "⁄", /*#__PURE__*/React.createElement("sub", null, "3"), ")² +", " ", /*#__PURE__*/React.createElement("sup", null, "8"), "⁄", /*#__PURE__*/React.createElement("sub", null, "21"), " ≈ ", num(Q_MIN), ".")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("strong", null, "Warum genau hier?"), /*#__PURE__*/React.createElement("p", {
     style: {
       margin: "8px 0"
     }
@@ -2326,7 +2413,7 @@ function NormalgleichungenBesteLoesung() {
     style: {
       margin: "8px 0 0 0"
     }
-  }, "Die beiden Quadrate sind nie negativ — Q kann also nie unter ", /*#__PURE__*/React.createElement("sup", null, "8"), "⁄", /*#__PURE__*/React.createElement("sub", null, "21"), " ≈ ", num(Q_MIN), " fallen, der Fehlervektor nie kürzer werden als", " ", num(LEN_MIN), ". Und genau dort verschwinden beide Skalarprodukte. Der kürzeste Fehler ist der senkrechte.")), /*#__PURE__*/React.createElement("div", {
+  }, "Die beiden Quadrate sind nie negativ — Q kann also nie unter ", /*#__PURE__*/React.createElement("sup", null, "8"), "⁄", /*#__PURE__*/React.createElement("sub", null, "21"), " ≈ ", num(Q_MIN), " fallen, der Fehlervektor nie kürzer werden als", " ", num(LEN_MIN), ". Und genau dort verschwinden beide Skalarprodukte. Der kürzeste Fehler ist der senkrechte."))), /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 16
     }
@@ -2376,14 +2463,14 @@ function NormalgleichungenBesteLoesung() {
     sub: "2"
   }), " = (1 | 1 | 1)", /*#__PURE__*/React.createElement("sup", null, "T"), ", ", /*#__PURE__*/React.createElement(VecSym, {
     l: "b"
-  }), " = (0 | 0 | 1)", /*#__PURE__*/React.createElement("sup", null, "T"), " — die drei Zeilen sind die drei Messpunkte (−3|0), (1|0), (2|1). Das Vorzeichen des Fehlervektors ist Konvention: ", /*#__PURE__*/React.createElement(VecSym, {
+  }), " = (0 | 0 | 1)", /*#__PURE__*/React.createElement("sup", null, "T"), " — die drei Zeilen sind die drei Messpunkte (−3|0), (1|0), (2|1).", !SCHLANK && /*#__PURE__*/React.createElement(React.Fragment, null, " ", "Das Vorzeichen des Fehlervektors ist Konvention: ", /*#__PURE__*/React.createElement(VecSym, {
     l: "b"
   }), " − ", /*#__PURE__*/React.createElement(VecSym, {
     l: "b",
     sub: "E"
   }), " (in den Aufgaben ", /*#__PURE__*/React.createElement(VecSym, {
     l: "r"
-  }), ", das «Residuum») ist derselbe Vektor in umgekehrter Richtung und genau gleich lang.")));
+  }), ", das «Residuum») ist derselbe Vektor in umgekehrter Richtung und genau gleich lang."))));
 }
 ReactDOM.createRoot(document.getElementById("app-normalgleichungen-beste-loesung")).render(React.createElement(NormalgleichungenBesteLoesung));  } catch (err) {
     var mount = document.getElementById("app-normalgleichungen-beste-loesung");

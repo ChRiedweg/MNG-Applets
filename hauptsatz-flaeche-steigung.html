@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Homogene und inhomogene Lösungsgerade</title>
+<title>Hauptsatz: Fläche ↔ Steigung</title>
 <style>
   html, body { margin: 0; padding: 0; font-family: -apple-system, system-ui, sans-serif; background: #F7F8FA; }
   #app-mount-wrap { padding: 12px; }
@@ -313,7 +313,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
 </head>
 <body>
 <div id="app-mount-wrap">
-<div id="app-lgs-loesungsstruktur"><span>L&auml;dt Applet&hellip;</span></div>
+<div id="app-hauptsatz-flaeche-steigung"><span>L&auml;dt Applet&hellip;</span></div>
 </div>
 <script>
 (function () {
@@ -326,966 +326,575 @@ const {
   useCallback
 } = React;
 
-// =============================================================================
-//  Lösungsstruktur von LGS: inhomogen = spezielle Lösung + homogene Lösung
-//  (Kapitel "LGS -- Lineare Gleichungssysteme", Klasse 2g)
-//
-//  Konkretes 2x2-Beispiel (Geometrie wie im Beispiel "Inhomogenes LGS" in
-//  T_LGS_2026.tex, aber als System in genau den beiden Variablen x und y, die
-//  auch gezeichnet werden -- so gehört Grafik und LGS wirklich zusammen):
-//    inhomogen:   x + 3y = 1,  2x + 6y = 2  ->  L         = {(1-3t, t) | t in R}
-//    homogen:     x + 3y = 0,  2x + 6y = 0  ->  L_homogen = {(-3t,  t) | t in R}
-//  Die zweite Gleichung ist jeweils das Doppelte der ersten -- deshalb bleibt
-//  eine Variable frei und die Lösungsmenge ist eine ganze Gerade. Es geht hier
-//  nicht ums Rechnen, sondern um die Struktur der Lösungsmenge.
-//
-//  EIN Regler (t) ist der ganze Punkt: er bewegt gleichzeitig einen Punkt auf der
-//  homogenen Geraden (durch den Ursprung) und den zugehörigen Punkt auf der
-//  inhomogenen Geraden. Die Einsicht entsteht nicht durch mehr Regler, sondern
-//  dadurch, dass man sieht: der Verbindungsvektor zwischen beiden Punkten ist
-//  IMMER derselbe -- nämlich der Ortsvektor der speziellen Lösung P_0.
-//
-//  Sprachliche Genauigkeit (cr, 2026-09-03): Lösungen sind PUNKTE und werden als
-//  Punkte gezeichnet; addiert wird ausschliesslich zwischen VEKTOREN. Deshalb
-//  überall P_0, P_h, P für Punkte und Vektorpfeil-Notation für die Summe
-//  (Hausnotation wie in cr's Material: Pfeil über dem Punktnamen = Ortsvektor).
-//  Koordinaten werden mit Komma getrennt, Dezimalzahlen mit Punkt
-//  (SKRIPT_KONVENTIONEN.md) -- daher das Leerzeichen nach dem Komma.
-//
-//  Ueberarbeitung 2026-09-03 (zwei cr-Wuensche, beide abgesprochen):
-//  (1) DIE BEIDEN ZWEISPALTER BLEIBEN AUF JEDER BREITE ZWEISPALTIG.
-//      Der Vergleich inhomogen/homogen IST die Aussage dieses Applets --
-//      untereinander gestapelt hat man am Handy nie beides zugleich im Blick.
-//      Die frueher greifende @media-Stapelung unter 430px ist ersatzlos weg.
-//      Stattdessen skalieren Schriftgroessen, Innenabstaende, Luecken und
-//      Klammern per clamp() mit der Viewportbreite: bei ~430px und darueber
-//      stehen alle Werte am oberen Anschlag (Desktop-Eindruck unveraendert),
-//      nach unten schrumpfen sie so weit, dass zwei Spalten auch bei 320px
-//      nebeneinander lesbar bleiben. Seitliches Scrollen ist KEINE Loesung
-//      (von cr ausdruecklich verworfen) und kommt nirgends vor.
-//      Rechnung fuer 320px: 320 minus 2*12 Aussenabstand dieser Komponente
-//      minus 2*12 Polsterung der Wrapper-Seite (#root bzw. #app-mount-wrap)
-//      = 272; abzueglich Spaltenluecke 1.8vw = 5.8 bleiben ~133 pro Spalte,
-//      abzueglich 2*2.2vw = 14 Kartenpolsterung bleiben ~120px nutzbare
-//      Inhaltsbreite. Alle Zeilen unten sind auf dieses Budget hin gesetzt;
-//      die breiteste (inhomogene Loesungsmenge) misst dort gemessen ~110px.
-//  (2) STEHENDE SPALTENVEKTOREN, WO ADDIERT ODER GESTRECKT WIRD.
-//      Komponenten untereinander in runden Klammern (ColVec + VecParen);
-//      die Klammern sind SVG-Pfade mit preserveAspectRatio="none" und
-//      vectorEffect="non-scaling-stroke", damit sie auf jeder Inhaltshoehe
-//      sauber sitzen und die Strichstaerke dabei konstant bleibt -- Verfahren
-//      unveraendert uebernommen aus normalgleichungen-beste-loesung.jsx.
-//      Betroffen sind: die beiden Loesungsmengen (jetzt in Vektorform,
-//      Aufpunkt + t mal Richtungsvektor, statt die Streckung unsichtbar in den
-//      Koordinaten zu verstecken) und die beiden Ergebnis-Kacheln.
-//      NICHT betroffen sind blosse Ortsangaben: der Punkt P(-0.5, 0.5) unten
-//      in der Kachel bleibt ein Paar -- dort wird nichts addiert oder
-//      gestreckt, dort wird nur ein Ort genannt. Symbolische Stellen
-//      (Checkbox-Label, Prinzip-Kasten, Grafikbeschriftung) tragen weiterhin
-//      Vektorpfeile statt Komponenten; auch das sind "Vektoren" im Sinne des
-//      Wunsches, nur eben ohne Zahlen.
-// =============================================================================
-
-const D = {
-  x: -3,
-  y: 1
-}; // Richtungsvektor d der homogenen Lösung
-const P0 = {
-  x: 1,
-  y: 0
-}; // spezielle Lösung P_0 des inhomogenen LGS (Punkt bei t=0)
-
-function homogPoint(t) {
-  return {
-    x: D.x * t,
-    y: D.y * t
-  };
-}
-function inhomogPoint(t) {
-  return {
-    x: P0.x + D.x * t,
-    y: P0.y + D.y * t
-  };
-}
-const T_MIN = -1;
-const T_MAX = 1;
-const T_STEP = 0.01;
-const T_DEFAULT = 1;
-
-// ---------- Zeichenfläche ----------
-// Enges Fenster um den tatsächlich durchlaufenen Bereich (t in [-1,1]): auf
-// schmalen Handybreiten (~375px CSS-Pixel, viewBox skaliert runter) war der
-// Pfeil bei der alten BOX/H nur ~17px lang und der Abstand der beiden
-// parallelen Geraden nur ~5-7px -- kaum sichtbar. Engeres Fenster + kleineres H
-// verdoppelt den Massstab, ohne dass ein Teil der Bewegung abgeschnitten wird.
-const W = 600;
-const H = 270;
-const PAD = 40;
-const BOX = {
-  xmin: -3.6,
-  xmax: 4.6,
-  ymin: -1.5,
-  ymax: 1.5
-};
-
-// ISOTROPE Skalen (eine gemeinsame px/Einheit für x UND y), sonst verzerrt sich
-// die Richtung von d optisch und "parallel" sieht nicht mehr parallel aus.
-function makeIsoScales(box) {
-  const worldW = box.xmax - box.xmin;
-  const worldH = box.ymax - box.ymin;
-  const availW = W - 2 * PAD;
-  const availH = H - 2 * PAD;
-  const s = Math.min(availW / worldW, availH / worldH);
-  const offX = PAD + (availW - worldW * s) / 2;
-  const offY = PAD + (availH - worldH * s) / 2;
-  return {
-    sx: x => offX + (x - box.xmin) * s,
-    sy: y => H - offY - (y - box.ymin) * s
-  };
-}
-const SC = makeIsoScales(BOX);
-
-// Schneidet eine unendliche Gerade (Basispunkt + Richtung) mit der Box und
-// liefert die zwei Endpunkte des sichtbaren Segments.
-function clipLineToBox(base, dir, box) {
-  let smin = -Infinity;
-  let smax = Infinity;
-  function bound(b0, bMin, bMax, d) {
-    if (Math.abs(d) < 1e-9) return; // Gerade parallel zur Achse -> keine Einschränkung
-    const s1 = (bMin - b0) / d;
-    const s2 = (bMax - b0) / d;
-    smin = Math.max(smin, Math.min(s1, s2));
-    smax = Math.min(smax, Math.max(s1, s2));
+// ---------- Presets ----------
+// Zwei bewusst nicht-triviale Beispiele, beide mit Vorzeichenwechsel von f:
+// genau dort, wo f(t) die Achse kreuzt, hat F eine waagrechte Tangente — das
+// ist der Moment, in dem der Hauptsatz am deutlichsten "einschlägt".
+const PRESETS = {
+  sinus: {
+    label: /*#__PURE__*/React.createElement(React.Fragment, null, "f(t) = sin(t)"),
+    f: t => Math.sin(t),
+    domainMax: 2 * Math.PI,
+    tExpr: "sin(t)"
+  },
+  parabel: {
+    label: /*#__PURE__*/React.createElement(React.Fragment, null, "f(t) = (t−2)² − 1"),
+    f: t => (t - 2) * (t - 2) - 1,
+    domainMax: 4,
+    tExpr: "(t−2)² − 1"
   }
-  bound(base.x, box.xmin, box.xmax, dir.x);
-  bound(base.y, box.ymin, box.ymax, dir.y);
-  if (smin > smax) return null;
-  return [{
-    x: base.x + smin * dir.x,
-    y: base.y + smin * dir.y
-  }, {
-    x: base.x + smax * dir.x,
-    y: base.y + smax * dir.y
-  }];
-}
-
-// ---------- Farben ----------
-const COL = {
-  homog: "#24435F",
-  // ink -- homogene Lösung / Richtungsvektor d
-  p0: "#1F9E6B",
-  // grün -- spezielle Lösung P_0
-  p0Dark: "#127A50",
-  inhomog: "#D9720A",
-  // orange -- inhomogene Lösung (das Ergebnis)
-  inhomogDark: "#B0590A",
-  grid: "#E4E1D9",
-  frame: "#E4E1D9",
-  axis: "#B9B9B9"
 };
-const MONO = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
-function ArrowMarker({
-  id,
-  color,
-  size = 11
-}) {
-  return /*#__PURE__*/React.createElement("marker", {
-    id: id,
-    viewBox: "0 0 10 10",
-    refX: "8.5",
-    refY: "5",
-    markerWidth: size,
-    markerHeight: size,
-    markerUnits: "userSpaceOnUse",
-    orient: "auto-start-reverse"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M1,1 L9,5 L1,9 z",
-    fill: color
-  }));
-}
-function Arrow({
-  from,
-  to,
-  color,
-  width = 3,
-  markerId,
-  dashed
-}) {
-  return /*#__PURE__*/React.createElement("line", {
-    x1: SC.sx(from.x),
-    y1: SC.sy(from.y),
-    x2: SC.sx(to.x),
-    y2: SC.sy(to.y),
-    stroke: color,
-    strokeWidth: width,
-    strokeLinecap: "round",
-    strokeDasharray: dashed ? "6 4" : undefined,
-    markerEnd: markerId ? `url(#${markerId})` : undefined
-  });
-}
+const COLOR_F_CURVE = "#24435F"; // dunkelblau — Graph von f
+const COLOR_STAMM = "#1F9E6B"; // grün — Graph von F (Stammfunktion)
+const COLOR_AREA_POS = "#1F9E6B"; // grün — Fläche oberhalb der Achse (positiv)
+const COLOR_AREA_NEG = "#C24E1A"; // rostrot — Fläche unterhalb der Achse (negativ)
+const COLOR_TANGENT = "#B0590A"; // orange — Tangente an F / Steigungswert (dieselbe Zahl wie f(x))
+const COLOR_POS = "#7A3FA0"; // violett — Ort x, in beiden Graphen gleich markiert
 
-// Vektor-Notation im HTML-Text: Pfeil ÜBER dem Buchstaben (Hausnotation aus
-// cr's Material: der Pfeil über einem Punktnamen meint dessen Ortsvektor).
-// Der tiefgestellte Index steht daneben, nicht unter dem Pfeil.
-// Der Buchstabe bleibt im normalen Textfluss (Grundlinie stimmt), der Pfeil wird
-// absolut darüber gesetzt -- Flex-Spalten verschieben sonst die Grundlinie.
-// Die umgebenden Container brauchen dafür lineHeight >= 1.7.
-function Vec({
-  letter,
-  sub
-}) {
-  return /*#__PURE__*/React.createElement("span", {
-    style: {
-      whiteSpace: "nowrap"
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      position: "relative",
-      display: "inline-block",
-      fontStyle: "italic",
-      lineHeight: 1
-    }
-  }, letter, /*#__PURE__*/React.createElement("span", {
-    "aria-hidden": "true",
-    style: {
-      position: "absolute",
-      left: 0,
-      right: 0,
-      bottom: "1em",
-      fontSize: "0.62em",
-      lineHeight: 1,
-      textAlign: "center",
-      fontStyle: "normal"
-    }
-  }, "→")), sub ? /*#__PURE__*/React.createElement("sub", {
-    style: {
-      fontStyle: "normal",
-      fontSize: "0.72em"
-    }
-  }, sub) : null);
-}
-
-// Eine Haelfte eines runden Klammerpaars als SVG-Pfad. preserveAspectRatio
-// ="none" laesst die Klammer auf JEDE Inhaltshoehe mitwachsen (zwei Zeilen,
-// drei Zeilen, andere Schriftgroesse), vectorEffect="non-scaling-stroke" haelt
-// die Strichstaerke dabei konstant -- ohne das wird die Linie beim Strecken
-// mitverzerrt und die Klammer wirkt oben/unten fett. Breite in em, damit die
-// Klammer der clamp()-Schriftgroesse folgt.
-// Verfahren uebernommen aus normalgleichungen-beste-loesung.jsx.
-function VecParen({
-  side,
-  color
-}) {
-  const d = side === "left" ? "M7.8,2 C3.6,26 3.6,74 7.8,98" : "M2.2,2 C6.4,26 6.4,74 2.2,98";
-  return /*#__PURE__*/React.createElement("svg", {
-    viewBox: "0 0 10 100",
-    preserveAspectRatio: "none",
-    "aria-hidden": "true",
-    style: {
-      position: "absolute",
-      top: 0,
-      bottom: 0,
-      [side]: 0,
-      width: "0.58em",
-      height: "100%"
-    }
-  }, /*#__PURE__*/React.createElement("path", {
-    d: d,
-    fill: "none",
-    stroke: color,
-    strokeWidth: "1.6",
-    strokeLinecap: "round",
-    vectorEffect: "non-scaling-stroke"
-  }));
-}
-
-// Stehender Spaltenvektor: Komponenten untereinander, rechtsbuendig (so stehen
-// Minuszeichen aussen und die Ziffern untereinander), in runden Klammern.
-// Ueberall dort, wo ADDIERT oder GESTRECKT wird (cr, 2026-09-03). Monospace,
-// damit die Komponenten wirklich uebereinander stehen; verticalAlign "middle"
-// setzt die Klammer mittig zu "=", "+" und dem Streckfaktor daneben.
-function ColVec({
-  rows,
-  color
-}) {
-  return /*#__PURE__*/React.createElement("span", {
-    style: {
-      position: "relative",
-      display: "inline-flex",
-      flexDirection: "column",
-      alignItems: "flex-end",
-      fontFamily: MONO,
-      lineHeight: 1.18,
-      padding: "0.1em 0.62em",
-      color,
-      verticalAlign: "middle",
-      whiteSpace: "nowrap"
-    }
-  }, /*#__PURE__*/React.createElement(VecParen, {
-    side: "left",
-    color: color
-  }), rows.map((r, i) => /*#__PURE__*/React.createElement("span", {
-    key: i
-  }, r)), /*#__PURE__*/React.createElement(VecParen, {
-    side: "right",
-    color: color
-  }));
-}
-
-// Mengenklammer, die einem zweizeiligen Spaltenvektor der Hoehe nach standhaelt.
-function SetBrace({
-  ch
-}) {
-  return /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: "Georgia, serif",
-      fontSize: "2.1em",
-      lineHeight: 0.85,
-      color: "#A6A6A6"
-    }
-  }, ch);
-}
-
-// Zusammengehoerige Gruppe (z. B. "t mal Vektor"), die beim Umbrechen nicht
-// auseinandergerissen werden darf.
-function Term({
-  children,
-  style
-}) {
-  return /*#__PURE__*/React.createElement("span", {
-    style: {
-      display: "inline-flex",
-      alignItems: "center",
-      whiteSpace: "nowrap",
-      ...style
-    }
-  }, children);
-}
-
-// Loesungsmenge in Vektorform: Aufpunkt + gestreckter Richtungsvektor als
-// stehende Spaltenvektoren. Ohne Aufpunkt (base = null) ergibt sich die
-// homogene Loesungsmenge. Der senkrechte Strich bleibt -- er ist hier das
-// Mengenbildungszeichen, kein Koordinatentrenner.
-// Die Beschriftung "L =" ist ein eigenes Flex-Element: auf schmalen Geraeten
-// rutscht sie auf eine eigene Zeile, statt die Mengenklammer zu quetschen.
-function SolutionSet({
-  label,
-  sub,
-  base,
-  dir,
-  color
-}) {
-  return /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-set",
-    style: {
-      display: "flex",
-      flexWrap: "wrap",
-      alignItems: "center",
-      columnGap: "0.35em",
-      rowGap: 2
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      whiteSpace: "nowrap"
-    }
-  }, /*#__PURE__*/React.createElement("i", null, label), sub ? /*#__PURE__*/React.createElement("sub", {
-    style: {
-      fontSize: "0.72em"
-    }
-  }, sub) : null, " ="), /*#__PURE__*/React.createElement(Term, {
-    style: {
-      columnGap: "0.22em"
-    }
-  }, /*#__PURE__*/React.createElement(SetBrace, {
-    ch: "{"
-  }), base ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(ColVec, {
-    rows: base,
-    color: color
-  }), /*#__PURE__*/React.createElement("span", null, "+")) : null, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("i", null, "t"), "·"), /*#__PURE__*/React.createElement(ColVec, {
-    rows: dir,
-    color: color
-  }), /*#__PURE__*/React.createElement("span", {
-    style: {
-      padding: "0 0.1em",
-      color: "#9AA1AC"
-    }
-  }, "|"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("i", null, "t"), "∈ℝ"), /*#__PURE__*/React.createElement(SetBrace, {
-    ch: "}"
-  })));
-}
-
-// Punkt-Notation im HTML-Text: kursiver Name, KEIN Pfeil.
-function Pt({
-  letter,
-  sub
-}) {
-  return /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontStyle: "italic"
-    }
-  }, letter, sub ? /*#__PURE__*/React.createElement("sub", {
-    style: {
-      fontStyle: "normal",
-      fontSize: "0.75em"
-    }
-  }, sub) : null);
-}
-
-// Gleichungsraster: die beiden Gleichungen stehen untereinander, die
-// Gleichheitszeichen exakt in einer senkrechten Linie, die Koeffizienten
-// spaltenweise bündig (cr-Wunsch "am = schön ausrichten").
-function EqSystem({
-  rows,
-  color
-}) {
-  return /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-eq",
-    style: {
-      display: "inline-grid",
-      gridTemplateColumns: "auto auto auto auto auto",
-      alignItems: "center",
-      rowGap: 2,
-      fontFamily: MONO,
-      color
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      gridRow: `span ${rows.length}`,
-      fontSize: "2.3em",
-      lineHeight: 1,
-      color: "#A6A6A6",
-      paddingRight: "0.12em",
-      fontFamily: "Georgia, serif"
-    }
-  }, "{"), rows.map((r, i) => /*#__PURE__*/React.createElement(React.Fragment, {
-    key: i
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      textAlign: "right"
-    }
-  }, r.a), /*#__PURE__*/React.createElement("span", {
-    style: {
-      textAlign: "right",
-      paddingLeft: "0.35em"
-    }
-  }, r.b), /*#__PURE__*/React.createElement("span", {
-    style: {
-      textAlign: "center",
-      padding: "0 0.35em"
-    }
-  }, "="), /*#__PURE__*/React.createElement("span", {
-    style: {
-      textAlign: "right"
-    }
-  }, r.c))));
-}
-
-// Dezimaltrennzeichen: PUNKT (SKRIPT_KONVENTIONEN.md). Das Komma bleibt dem
-// Trennen der Koordinaten vorbehalten. Minuszeichen als echtes U+2212.
-function fmt(v) {
-  const r = Math.round(v * 100) / 100;
-  return (r === 0 ? 0 : r).toString().replace("-", "−");
-}
-// Koordinaten IMMER mit Komma + Abstand, nie mit senkrechtem Strich (cr,
-// 2026-09-03) -- der Abstand verhindert die Verwechslung mit einem Dezimalkomma.
-function fmtPair(p) {
-  return `(${fmt(p.x)}, ${fmt(p.y)})`;
-}
-// Streckfaktor, wie er HINTER einem Pluszeichen stehen darf: ein negatives t
-// bekommt eine Klammer, sonst stuende dort "+ −0.99·".
-function fmtFactorAfterPlus(v) {
-  return v < 0 ? `(${fmt(v)})·` : `${fmt(v)}·`;
-}
-function LgsLoesungsstruktur() {
-  const [t, setT] = useState(T_DEFAULT);
-  const [showDecomp, setShowDecomp] = useState(false);
-  const Ph = useMemo(() => homogPoint(t), [t]);
-  const Pi = useMemo(() => inhomogPoint(t), [t]);
-  const homogLine = useMemo(() => clipLineToBox({
-    x: 0,
-    y: 0
-  }, D, BOX), []);
-  const inhomogLine = useMemo(() => clipLineToBox(P0, D, BOX), []);
-  const O = {
-    x: 0,
-    y: 0
+const W = 600;
+const H = 260;
+const PAD = 42;
+function makeScales(domain, yDomain) {
+  const [x0, x1] = domain;
+  const [y0, y1] = yDomain;
+  const sx = x => PAD + (x - x0) / (x1 - x0) * (W - 2 * PAD);
+  const sy = y => H - PAD - (y - y0) / (y1 - y0) * (H - 2 * PAD);
+  return {
+    sx,
+    sy
   };
+}
+function niceTicks(min, max, count = 5) {
+  const range = max - min;
+  if (!(range > 0)) return [min];
+  const rawStep = range / count;
+  const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const norm = rawStep / mag;
+  const niceNorm = norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10;
+  const step = niceNorm * mag;
+  const start = Math.ceil(min / step) * step;
+  const ticks = [];
+  for (let v = start; v <= max + step * 1e-6; v += step) ticks.push(Math.round(v / step) * step);
+  return ticks;
+}
+
+// orientiertes Integral ∫[a,b] f(t) dt — funktioniert auch für b < a (dann negativ)
+function fineArea(f, a, b, steps = 700) {
+  if (a === b) return 0;
+  const dt = (b - a) / steps;
+  let s = 0;
+  for (let i = 0; i < steps; i++) s += f(a + (i + 0.5) * dt) * dt;
+  return s;
+}
+
+// F(t) = ∫[0,t] f, tabelliert über den ganzen Definitionsbereich (fester Referenzpunkt a = 0)
+function computeFCurve(f, domainMax, resolution = 320) {
+  const dt = domainMax / resolution;
+  let acc = 0;
+  const pts = [[0, 0]];
+  for (let i = 1; i <= resolution; i++) {
+    const tMid = (i - 0.5) * dt;
+    acc += f(tMid) * dt;
+    pts.push([i * dt, acc]);
+  }
+  return pts;
+}
+function Axes({
+  xTicks,
+  yTicks,
+  sx,
+  sy,
+  xLabel,
+  yLabel,
+  xAxisY
+}) {
+  const tickY = xAxisY !== undefined ? xAxisY : H - PAD;
+  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("line", {
+    x1: PAD,
+    y1: tickY,
+    x2: W - PAD,
+    y2: tickY,
+    stroke: "#B9B9B9",
+    strokeWidth: "1.2"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: PAD,
+    y1: PAD,
+    x2: PAD,
+    y2: H - PAD,
+    stroke: "#B9B9B9",
+    strokeWidth: "1.2"
+  }), xTicks.map(t => /*#__PURE__*/React.createElement("g", {
+    key: `xt-${t}`
+  }, /*#__PURE__*/React.createElement("line", {
+    x1: sx(t),
+    y1: tickY,
+    x2: sx(t),
+    y2: tickY + 5,
+    stroke: "#B9B9B9",
+    strokeWidth: "1.2"
+  }), /*#__PURE__*/React.createElement("text", {
+    x: sx(t),
+    y: tickY + 18,
+    fontSize: "11",
+    fill: "#6B6B6B",
+    fontFamily: "ui-monospace, monospace",
+    textAnchor: "middle"
+  }, Number.isInteger(t) ? t : t.toFixed(1)))), yTicks.map(t => /*#__PURE__*/React.createElement("g", {
+    key: `yt-${t}`
+  }, /*#__PURE__*/React.createElement("line", {
+    x1: PAD - 5,
+    y1: sy(t),
+    x2: PAD,
+    y2: sy(t),
+    stroke: "#B9B9B9",
+    strokeWidth: "1.2"
+  }), /*#__PURE__*/React.createElement("text", {
+    x: PAD - 9,
+    y: sy(t) + 4,
+    fontSize: "11",
+    fill: "#6B6B6B",
+    fontFamily: "ui-monospace, monospace",
+    textAnchor: "end"
+  }, Number.isInteger(t) ? t : t.toFixed(1)))), /*#__PURE__*/React.createElement("text", {
+    x: W - PAD + 12,
+    y: tickY + 5,
+    fontSize: "14",
+    fill: "#5B6472",
+    fontFamily: "Georgia, serif",
+    fontStyle: "italic"
+  }, xLabel), /*#__PURE__*/React.createElement("text", {
+    x: PAD,
+    y: PAD - 10,
+    fontSize: "14",
+    fill: "#5B6472",
+    fontFamily: "Georgia, serif",
+    fontStyle: "italic",
+    textAnchor: "middle"
+  }, yLabel));
+}
+
+// zerlegt die Fläche von 0 bis x in vorzeichen-reine Trapez-Stücke, damit
+// positive und negative Fläche unterschiedlich eingefärbt werden können
+// (orientierte Fläche sichtbar machen statt "Fläche ist immer positiv" nahezulegen)
+function signedAreaPaths(samples, sx, sy, xHi) {
+  const inRange = samples.filter(([t]) => t <= xHi + 1e-9);
+  const pos = [];
+  const neg = [];
+  const trap = (t0, y0, t1, y1) => `M ${sx(t0).toFixed(1)} ${sy(0).toFixed(1)} L ${sx(t0).toFixed(1)} ${sy(y0).toFixed(1)} L ${sx(t1).toFixed(1)} ${sy(y1).toFixed(1)} L ${sx(t1).toFixed(1)} ${sy(0).toFixed(1)} Z`;
+  for (let i = 0; i < inRange.length - 1; i++) {
+    const [t0, y0] = inRange[i];
+    let [t1, y1] = inRange[i + 1];
+    if (t1 > xHi) {
+      // letztes Stück am Regler-Wert x kappen
+      const frac = (xHi - t0) / (t1 - t0);
+      y1 = y0 + (y1 - y0) * frac;
+      t1 = xHi;
+    }
+    if (y0 >= 0 && y1 >= 0) {
+      pos.push(trap(t0, y0, t1, y1));
+    } else if (y0 <= 0 && y1 <= 0) {
+      neg.push(trap(t0, y0, t1, y1));
+    } else {
+      const tCross = t0 + (t1 - t0) * (0 - y0) / (y1 - y0);
+      if (y0 > 0) {
+        pos.push(trap(t0, y0, tCross, 0));
+        neg.push(trap(tCross, 0, t1, y1));
+      } else {
+        neg.push(trap(t0, y0, tCross, 0));
+        pos.push(trap(tCross, 0, t1, y1));
+      }
+    }
+    if (t1 >= xHi) break;
+  }
+  return {
+    pos: pos.join(" "),
+    neg: neg.join(" ")
+  };
+}
+function HauptsatzFlaecheSteigung() {
+  const [presetKey, setPresetKey] = useState("sinus");
+  const preset = PRESETS[presetKey];
+  const {
+    f,
+    domainMax
+  } = preset;
+  const [x, setX] = useState(domainMax * 0.28);
+  function selectPreset(key) {
+    setPresetKey(key);
+    setX(PRESETS[key].domainMax * 0.28);
+  }
+  const domain = [0, domainMax];
+
+  // f-Graph: feste Stichproben über den ganzen Definitionsbereich
+  const {
+    samplesF,
+    yDomainF
+  } = useMemo(() => {
+    const pts = [];
+    let ymin = Infinity,
+      ymax = -Infinity;
+    for (let i = 0; i <= 240; i++) {
+      const t = domainMax * i / 240;
+      const y = f(t);
+      pts.push([t, y]);
+      if (y < ymin) ymin = y;
+      if (y > ymax) ymax = y;
+    }
+    const pad = (ymax - ymin) * 0.18 || 1;
+    return {
+      samplesF: pts,
+      yDomainF: [Math.min(0, ymin - pad), Math.max(0, ymax + pad)]
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetKey]);
+  const {
+    sx: sxF,
+    sy: syF
+  } = makeScales(domain, yDomainF);
+  const xTicks = useMemo(() => niceTicks(0, domainMax, 5), [domainMax]);
+  const yTicksF = useMemo(() => niceTicks(yDomainF[0], yDomainF[1], 4), [yDomainF]);
+  const curvePathF = samplesF.map(([t, y], i) => `${i === 0 ? "M" : "L"} ${sxF(t).toFixed(1)} ${syF(y).toFixed(1)}`).join(" ");
+  const {
+    pos: areaPos,
+    neg: areaNeg
+  } = useMemo(() => signedAreaPaths(samplesF, sxF, syF, x), [samplesF, x]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // F-Graph: über den ganzen Bereich fest (y-Skala hängt NICHT von x ab, sonst
+  // würde eine "steilere" Tangente nur durch Umskalieren vorgetäuscht)
+  const FCurve = useMemo(() => computeFCurve(f, domainMax), [presetKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const yDomainSTAMM = useMemo(() => {
+    let ymin = Infinity,
+      ymax = -Infinity;
+    FCurve.forEach(([, y]) => {
+      if (y < ymin) ymin = y;
+      if (y > ymax) ymax = y;
+    });
+    const pad = (ymax - ymin) * 0.2 || 1;
+    return [Math.min(0, ymin - pad), Math.max(0, ymax + pad)];
+  }, [FCurve]);
+  const {
+    sx: sxS,
+    sy: syS
+  } = makeScales(domain, yDomainSTAMM);
+  const yTicksS = useMemo(() => niceTicks(yDomainSTAMM[0], yDomainSTAMM[1], 4), [yDomainSTAMM]);
+  const curvePathStamm = FCurve.map(([t, y], i) => `${i === 0 ? "M" : "L"} ${sxS(t).toFixed(1)} ${syS(y).toFixed(1)}`).join(" ");
+  const fx = f(x);
+  const Fx = useMemo(() => fineArea(f, 0, x), [presetKey, x]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Steigung von F bei x wird UNABHÄNGIG gemessen: aus der akkumulierten
+  // Fläche selbst (nicht aus der Formel für f) — genau das ist die Pointe,
+  // die nachher mit f(x) verglichen wird.
+  const h = domainMax * 0.004;
+  const slope = useMemo(() => fineArea(f, x - h, x + h, 40) / (2 * h), [presetKey, x]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const tRun = domainMax * 0.13;
+  const tangentY = t => Fx + slope * (t - x);
+  const scaleAbs = Math.max(...FCurve.map(([, y]) => Math.abs(y)), 0.5);
+  const nearZero = Math.abs(fx) < scaleAbs * 0.035;
   return /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
       background: "#F7F6F3",
       minHeight: "100vh",
-      padding: "20px 12px",
-      color: "#1E2430",
-      boxSizing: "border-box"
+      padding: "24px 16px",
+      color: "#1E2430"
     }
-  }, /*#__PURE__*/React.createElement("style", null, `
-        .lgsls-two { display: grid; grid-template-columns: 1fr 1fr;
-                     gap: clamp(5px, 1.8vw, 10px); align-items: stretch; }
-        .lgsls-card { background: #FFFFFF; border: 1px solid ${COL.frame};
-                      border-radius: 10px; padding: clamp(6px, 2.2vw, 12px);
-                      box-sizing: border-box; min-width: 0; }
-        .lgsls-tile { border-radius: 10px; padding: clamp(7px, 2.6vw, 12px);
-                      box-sizing: border-box; min-width: 0; }
-        .lgsls-head { font-size: clamp(9.5px, 2.8vw, 12px); line-height: 1.25;
-                      margin-bottom: 6px; }
-        .lgsls-card .lgsls-head { min-height: 2.5em; }
-        .lgsls-eq   { font-size: clamp(10px, 3.2vw, 13px); }
-        .lgsls-set  { font-size: clamp(9.5px, 2.9vw, 12.5px); color: #5B6472;
-                      margin-top: 8px; }
-        .lgsls-form { font-size: clamp(9.5px, 2.9vw, 12.5px);
-                      font-family: ${MONO}; }
-        .lgsls-res  { font-size: clamp(11px, 3.7vw, 15.5px); font-weight: 700;
-                      font-family: ${MONO}; margin-top: 6px; }
-      `), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
     style: {
-      maxWidth: 700,
+      maxWidth: 780,
       margin: "0 auto"
     }
   }, /*#__PURE__*/React.createElement("h1", {
     style: {
-      fontFamily: "Georgia, 'Times New Roman', serif",
-      fontSize: 23,
+      fontFamily: "Georgia, serif",
+      fontSize: 22,
       fontWeight: 700,
-      margin: "0 0 4px 0",
-      letterSpacing: "-0.01em"
+      margin: "0 0 4px 0"
     }
-  }, "Homogene und inhomogene Lösungsgerade"), /*#__PURE__*/React.createElement("p", {
+  }, "Hauptsatz: Fläche ↔ Steigung"), /*#__PURE__*/React.createElement("p", {
     style: {
       fontSize: 14,
       color: "#5B6472",
       margin: "0 0 14px 0"
     }
-  }, "Zieh am Regler für ", /*#__PURE__*/React.createElement("b", null, "t"), ". Beobachte die beiden Punkte — und wie der Pfeil vom blauen zum orangen Punkt dabei immer derselbe bleibt."), /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-two",
+  }, "Schiebe x. Links wächst die Fläche unter f, rechts wandert der Punkt auf F mit seiner Tangente — welchen Zusammenhang siehst du zwischen der Tangentensteigung und f(x)?"), /*#__PURE__*/React.createElement("div", {
     style: {
-      marginBottom: 10
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 8,
+      marginBottom: 14
     }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-card"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-head",
+  }, Object.entries(PRESETS).map(([key, p]) => /*#__PURE__*/React.createElement("button", {
+    key: key,
+    onClick: () => selectPreset(key),
     style: {
-      color: COL.inhomogDark,
+      padding: "8px 14px",
+      minHeight: 44,
+      borderRadius: 8,
+      border: key === presetKey ? "2px solid #24435F" : "1px solid #D8D5CE",
+      background: key === presetKey ? "#24435F" : "#FFFFFF",
+      color: key === presetKey ? "#FFFFFF" : "#1E2430",
+      fontSize: 13,
+      cursor: "pointer",
+      fontFamily: "Georgia, serif"
+    }
+  }, p.label))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(270px, 1fr))",
+      gap: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 13,
+      color: "#5B6472",
+      margin: "0 0 4px 2px"
+    }
+  }, "f(t), Fläche von 0 bis x \xA0", /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "ui-monospace, monospace",
+      fontSize: 12
+    }
+  }, "(", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: COLOR_AREA_POS,
       fontWeight: 700
     }
-  }, "Inhomogenes LGS"), /*#__PURE__*/React.createElement(EqSystem, {
-    color: COL.inhomogDark,
-    rows: [{
-      a: "x",
-      b: "+ 3y",
-      c: "1"
-    }, {
-      a: "2x",
-      b: "+ 6y",
-      c: "2"
-    }]
-  }), /*#__PURE__*/React.createElement(SolutionSet, {
-    label: "L",
-    base: [fmt(P0.x), fmt(P0.y)],
-    dir: [fmt(D.x), fmt(D.y)],
-    color: COL.inhomogDark
-  })), /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-card"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-head",
+  }, "grün"), " = positiv, ", /*#__PURE__*/React.createElement("span", {
     style: {
-      color: COL.homog,
+      color: COLOR_AREA_NEG,
       fontWeight: 700
     }
-  }, "Zugehöriges homogenes LGS"), /*#__PURE__*/React.createElement(EqSystem, {
-    color: COL.homog,
-    rows: [{
-      a: "x",
-      b: "+ 3y",
-      c: "0"
-    }, {
-      a: "2x",
-      b: "+ 6y",
-      c: "0"
-    }]
-  }), /*#__PURE__*/React.createElement(SolutionSet, {
-    label: "L",
-    sub: "homogen",
-    base: null,
-    dir: [fmt(D.x), fmt(D.y)],
-    color: COL.homog
-  }))), /*#__PURE__*/React.createElement("p", {
-    style: {
-      fontSize: 12,
-      color: "#8A8A8A",
-      margin: "0 2px 14px 2px"
-    }
-  }, "Die zweite Gleichung ist jeweils das Doppelte der ersten. Darum bleibt eine Variable frei — und die Lösungsmenge ist eine ganze Gerade statt eines einzelnen Punktes."), /*#__PURE__*/React.createElement("div", {
+  }, "rostrot"), " = negativ)")), /*#__PURE__*/React.createElement("div", {
     style: {
       background: "#FFFFFF",
-      border: `1px solid ${COL.frame}`,
+      border: "1px solid #E4E1D9",
       borderRadius: 12,
-      padding: 6
+      padding: 8
     }
   }, /*#__PURE__*/React.createElement("svg", {
     width: "100%",
     viewBox: `0 0 ${W} ${H}`,
     role: "img",
-    "aria-label": "Homogene Gerade durch den Ursprung und dazu parallel verschobene inhomogene Gerade, mit den Lösungspunkten zum Parameter t",
-    style: {
-      display: "block",
-      width: "100%",
-      maxWidth: "100%"
-    }
-  }, /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement(ArrowMarker, {
-    id: "mk-homog",
-    color: COL.homog
-  }), /*#__PURE__*/React.createElement(ArrowMarker, {
-    id: "mk-p0",
-    color: COL.p0
-  }), /*#__PURE__*/React.createElement(ArrowMarker, {
-    id: "mk-inhomog",
-    color: COL.inhomogDark
-  })), /*#__PURE__*/React.createElement("line", {
-    x1: SC.sx(BOX.xmin),
-    y1: SC.sy(0),
-    x2: SC.sx(BOX.xmax),
-    y2: SC.sy(0),
-    stroke: COL.axis,
-    strokeWidth: "1.2"
+    "aria-label": "Graph von f mit Fläche von 0 bis x"
+  }, /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement("clipPath", {
+    id: "clipF"
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: PAD,
+    y: PAD,
+    width: W - 2 * PAD,
+    height: H - 2 * PAD
+  }))), /*#__PURE__*/React.createElement(Axes, {
+    xTicks: xTicks,
+    yTicks: yTicksF,
+    sx: sxF,
+    sy: syF,
+    xLabel: "t",
+    yLabel: "y"
+  }), /*#__PURE__*/React.createElement("g", {
+    clipPath: "url(#clipF)"
+  }, areaPos && /*#__PURE__*/React.createElement("path", {
+    d: areaPos,
+    fill: COLOR_AREA_POS,
+    opacity: 0.3,
+    stroke: "none"
+  }), areaNeg && /*#__PURE__*/React.createElement("path", {
+    d: areaNeg,
+    fill: COLOR_AREA_NEG,
+    opacity: 0.3,
+    stroke: "none"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: curvePathF,
+    fill: "none",
+    stroke: COLOR_F_CURVE,
+    strokeWidth: "2.3"
   }), /*#__PURE__*/React.createElement("line", {
-    x1: SC.sx(0),
-    y1: SC.sy(BOX.ymin),
-    x2: SC.sx(0),
-    y2: SC.sy(BOX.ymax),
-    stroke: COL.axis,
-    strokeWidth: "1.2"
-  }), /*#__PURE__*/React.createElement("text", {
-    x: SC.sx(BOX.xmax) - 4,
-    y: SC.sy(0) - 8,
-    fontSize: "14",
-    fill: "#5B6472",
-    fontFamily: "Georgia, serif",
-    fontStyle: "italic",
-    textAnchor: "end"
-  }, "x"), /*#__PURE__*/React.createElement("text", {
-    x: SC.sx(0) + 10,
-    y: SC.sy(BOX.ymax) + 14,
-    fontSize: "14",
-    fill: "#5B6472",
-    fontFamily: "Georgia, serif",
-    fontStyle: "italic"
-  }, "y"), homogLine && /*#__PURE__*/React.createElement("line", {
-    x1: SC.sx(homogLine[0].x),
-    y1: SC.sy(homogLine[0].y),
-    x2: SC.sx(homogLine[1].x),
-    y2: SC.sy(homogLine[1].y),
-    stroke: COL.homog,
-    strokeWidth: "2",
-    strokeDasharray: "7 5",
-    opacity: "0.75"
-  }), inhomogLine && /*#__PURE__*/React.createElement("line", {
-    x1: SC.sx(inhomogLine[0].x),
-    y1: SC.sy(inhomogLine[0].y),
-    x2: SC.sx(inhomogLine[1].x),
-    y2: SC.sy(inhomogLine[1].y),
-    stroke: COL.inhomog,
-    strokeWidth: "2.6"
-  }), showDecomp && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Arrow, {
-    from: Ph,
-    to: Pi,
-    color: COL.p0,
-    width: 2.2,
-    markerId: "mk-p0",
-    dashed: true
-  }), Math.abs(t) > 0.15 && /*#__PURE__*/React.createElement("g", null, /*#__PURE__*/React.createElement("text", {
-    x: (SC.sx(Ph.x) + SC.sx(Pi.x)) / 2,
-    y: SC.sy(Ph.y) - 12,
-    fontSize: "12.5",
-    fill: COL.p0Dark,
-    fontFamily: "Georgia, serif",
-    fontStyle: "italic",
-    textAnchor: "middle"
-  }, "P", /*#__PURE__*/React.createElement("tspan", {
-    fontSize: "9",
-    dy: "3",
-    fontStyle: "normal"
-  }, "0")), /*#__PURE__*/React.createElement("text", {
-    x: (SC.sx(Ph.x) + SC.sx(Pi.x)) / 2 - 3,
-    y: SC.sy(Ph.y) - 23,
-    fontSize: "9.5",
-    fill: COL.p0Dark,
-    textAnchor: "middle"
-  }, "→")), /*#__PURE__*/React.createElement(Arrow, {
-    from: O,
-    to: P0,
-    color: COL.p0,
-    width: 3.4,
-    markerId: "mk-p0"
-  }), /*#__PURE__*/React.createElement("g", null, /*#__PURE__*/React.createElement("text", {
-    x: (SC.sx(0) + SC.sx(P0.x)) / 2,
-    y: (SC.sy(0) + SC.sy(P0.y)) / 2 - 10,
-    fontSize: "14",
-    fill: COL.p0Dark,
-    fontFamily: "Georgia, serif",
-    fontStyle: "italic",
-    textAnchor: "middle"
-  }, "P", /*#__PURE__*/React.createElement("tspan", {
-    fontSize: "10",
-    dy: "3",
-    fontStyle: "normal"
-  }, "0")), /*#__PURE__*/React.createElement("text", {
-    x: (SC.sx(0) + SC.sx(P0.x)) / 2 - 3.5,
-    y: (SC.sy(0) + SC.sy(P0.y)) / 2 - 22,
-    fontSize: "10",
-    fill: COL.p0Dark,
-    textAnchor: "middle"
-  }, "→")), Math.abs(t) > 0.15 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Arrow, {
-    from: O,
-    to: Ph,
-    color: COL.homog,
-    width: 3.2,
-    markerId: "mk-homog"
-  }), /*#__PURE__*/React.createElement("g", null, /*#__PURE__*/React.createElement("text", {
-    x: (SC.sx(O.x) + SC.sx(Ph.x)) / 2,
-    y: (SC.sy(O.y) + SC.sy(Ph.y)) / 2 + 27,
-    fontSize: "14",
-    fill: COL.homog,
-    fontFamily: "Georgia, serif",
-    fontStyle: "italic",
-    textAnchor: "middle"
-  }, "t·d"), /*#__PURE__*/React.createElement("text", {
-    x: (SC.sx(O.x) + SC.sx(Ph.x)) / 2 + 7,
-    y: (SC.sy(O.y) + SC.sy(Ph.y)) / 2 + 16,
-    fontSize: "10",
-    fill: COL.homog,
-    textAnchor: "middle"
-  }, "→")))), /*#__PURE__*/React.createElement("circle", {
-    cx: SC.sx(P0.x),
-    cy: SC.sy(P0.y),
-    r: "4",
-    fill: "#FFFFFF",
-    stroke: COL.p0Dark,
-    strokeWidth: "2"
+    x1: sxF(x),
+    y1: PAD,
+    x2: sxF(x),
+    y2: H - PAD,
+    stroke: COLOR_POS,
+    strokeWidth: "1",
+    strokeDasharray: "3 3"
   }), /*#__PURE__*/React.createElement("circle", {
-    cx: SC.sx(0),
-    cy: SC.sy(0),
-    r: "3",
-    fill: COL.axis
-  }), /*#__PURE__*/React.createElement("circle", {
-    cx: SC.sx(Ph.x),
-    cy: SC.sy(Ph.y),
-    r: "6.5",
-    fill: COL.homog,
-    stroke: "#FFFFFF",
-    strokeWidth: "1.5"
-  }), /*#__PURE__*/React.createElement("circle", {
-    cx: SC.sx(Pi.x),
-    cy: SC.sy(Pi.y),
-    r: "6.5",
-    fill: COL.inhomog,
-    stroke: "#FFFFFF",
-    strokeWidth: "1.5"
-  }))), /*#__PURE__*/React.createElement("div", {
+    cx: sxF(x),
+    cy: syF(fx),
+    r: "5",
+    fill: COLOR_POS
+  })), /*#__PURE__*/React.createElement("text", {
+    x: sxF(x),
+    y: syF(0) + 30,
+    fontSize: "12",
+    fill: COLOR_POS,
+    fontFamily: "ui-monospace, monospace",
+    textAnchor: "middle"
+  }, "x"))), /*#__PURE__*/React.createElement("p", {
     style: {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: 14,
+      fontSize: 13,
       margin: "8px 2px 0 2px",
-      fontSize: 12,
-      color: "#5B6472"
+      fontFamily: "ui-monospace, monospace"
     }
-  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
+  }, "f(x) = ", /*#__PURE__*/React.createElement("strong", {
     style: {
-      color: COL.homog
+      color: COLOR_TANGENT
     }
-  }, "●"), " Punkt ", /*#__PURE__*/React.createElement(Pt, {
-    letter: "P",
-    sub: "h"
-  }), " auf L", /*#__PURE__*/React.createElement("sub", null, "homogen")), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
+  }, fx.toFixed(3)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
     style: {
-      color: COL.inhomog
+      fontSize: 13,
+      color: "#5B6472",
+      margin: "0 0 4px 2px"
     }
-  }, "●"), " Punkt ", /*#__PURE__*/React.createElement(Pt, {
-    letter: "P"
-  }), " auf L (inhomogen)"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
+  }, "F(x) = ∫₀ˣ f(t) dt, mit Tangente bei x", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
     style: {
-      color: COL.p0Dark
+      fontSize: 11.5,
+      color: "#8A8A8A"
     }
-  }, "○"), " ", /*#__PURE__*/React.createElement(Pt, {
-    letter: "P",
-    sub: "0"
-  }), " = spezielle Lösung (t = 0)")), /*#__PURE__*/React.createElement("div", {
+  }, "(das ist eine Stammfunktion von f — jede andere unterscheidet sich nur um eine Konstante)")), /*#__PURE__*/React.createElement("div", {
     style: {
-      marginTop: 20
+      background: "#FFFFFF",
+      border: "1px solid #E4E1D9",
+      borderRadius: 12,
+      padding: 8
+    }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "100%",
+    viewBox: `0 0 ${W} ${H}`,
+    role: "img",
+    "aria-label": "Graph von F mit Tangente bei x"
+  }, /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement("clipPath", {
+    id: "clipS"
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: PAD,
+    y: PAD,
+    width: W - 2 * PAD,
+    height: H - 2 * PAD
+  }))), /*#__PURE__*/React.createElement(Axes, {
+    xTicks: xTicks,
+    yTicks: yTicksS,
+    sx: sxS,
+    sy: syS,
+    xLabel: "x",
+    yLabel: "F",
+    xAxisY: syS(0)
+  }), /*#__PURE__*/React.createElement("g", {
+    clipPath: "url(#clipS)"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: curvePathStamm,
+    fill: "none",
+    stroke: COLOR_STAMM,
+    strokeWidth: "2.3"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: sxS(x),
+    y1: PAD,
+    x2: sxS(x),
+    y2: H - PAD,
+    stroke: COLOR_POS,
+    strokeWidth: "1",
+    strokeDasharray: "3 3"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: sxS(x - tRun),
+    y1: syS(tangentY(x - tRun)),
+    x2: sxS(x + tRun),
+    y2: syS(tangentY(x + tRun)),
+    stroke: COLOR_TANGENT,
+    strokeWidth: "2.4"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: sxS(x),
+    cy: syS(Fx),
+    r: "5",
+    fill: COLOR_POS
+  })), /*#__PURE__*/React.createElement("text", {
+    x: sxS(x),
+    y: syS(0) + 30,
+    fontSize: "12",
+    fill: COLOR_POS,
+    fontFamily: "ui-monospace, monospace",
+    textAnchor: "middle"
+  }, "x"))), /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 13,
+      margin: "8px 2px 0 2px",
+      fontFamily: "ui-monospace, monospace"
+    }
+  }, "F(x) = ", /*#__PURE__*/React.createElement("strong", {
+    style: {
+      color: COLOR_STAMM
+    }
+  }, Fx.toFixed(3)), " \xA0·\xA0 F′(x) ≈ ", /*#__PURE__*/React.createElement("strong", {
+    style: {
+      color: COLOR_TANGENT
+    }
+  }, slope.toFixed(3))))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 18
     }
   }, /*#__PURE__*/React.createElement("label", {
-    htmlFor: "lgsls-t",
     style: {
-      fontSize: 15,
+      fontSize: 13,
       display: "block",
-      marginBottom: 6,
-      fontWeight: 600
+      marginBottom: 4
     }
-  }, "t = ", fmt(t)), /*#__PURE__*/React.createElement("input", {
-    id: "lgsls-t",
+  }, "x = ", x.toFixed(2)), /*#__PURE__*/React.createElement("input", {
     type: "range",
-    min: T_MIN,
-    max: T_MAX,
-    step: T_STEP,
-    value: t,
-    onChange: e => setT(parseFloat(e.target.value)),
-    "aria-label": "Parameter t",
+    min: 0,
+    max: domainMax,
+    step: domainMax / 240,
+    value: x,
+    onChange: e => setX(parseFloat(e.target.value)),
     style: {
       width: "100%",
-      height: 44
+      minHeight: 44
     }
-  })), /*#__PURE__*/React.createElement("label", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-      minHeight: 44,
-      fontSize: 15,
-      cursor: "pointer",
-      userSelect: "none"
-    }
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "checkbox",
-    checked: showDecomp,
-    onChange: e => setShowDecomp(e.target.checked),
-    style: {
-      width: 20,
-      height: 20,
-      flexShrink: 0
-    }
-  }), /*#__PURE__*/React.createElement("span", null, "Zerlegung zeigen: ", /*#__PURE__*/React.createElement(Vec, {
-    letter: "P",
-    sub: "0"
-  }), " + ", /*#__PURE__*/React.createElement("i", null, "t"), "·", /*#__PURE__*/React.createElement(Vec, {
-    letter: "d"
-  }))), /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-two",
-    style: {
-      marginTop: 12
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-tile",
-    style: {
-      background: "#EAF0F6",
-      border: "1px solid #B9CBDD"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-head",
-    style: {
-      color: COL.homog
-    }
-  }, "Punkt auf L", /*#__PURE__*/React.createElement("sub", null, "homogen")), /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-form",
-    style: {
-      color: COL.homog,
-      lineHeight: 1.8
-    }
-  }, /*#__PURE__*/React.createElement(Vec, {
-    letter: "P",
-    sub: "h"
-  }), " = ", /*#__PURE__*/React.createElement("i", null, "t"), "·", /*#__PURE__*/React.createElement(Vec, {
-    letter: "d"
   })), /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-form",
-    style: {
-      display: "flex",
-      flexWrap: "wrap",
-      alignItems: "center",
-      columnGap: "0.3em",
-      color: COL.homog
-    }
-  }, /*#__PURE__*/React.createElement("span", null, "="), /*#__PURE__*/React.createElement(Term, null, /*#__PURE__*/React.createElement("span", null, fmt(t), "·"), /*#__PURE__*/React.createElement(ColVec, {
-    rows: [fmt(D.x), fmt(D.y)],
-    color: COL.homog
-  }))), /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-res",
-    style: {
-      color: COL.homog
-    }
-  }, /*#__PURE__*/React.createElement(Pt, {
-    letter: "P",
-    sub: "h"
-  }), fmtPair(Ph))), /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-tile",
-    style: {
-      background: "#FFF3E8",
-      border: "1px solid #F0CBA0"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-head",
-    style: {
-      color: COL.inhomogDark
-    }
-  }, "Punkt auf L (inhomogen)"), /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-form",
-    style: {
-      color: COL.inhomogDark,
-      lineHeight: 1.8
-    }
-  }, /*#__PURE__*/React.createElement(Vec, {
-    letter: "P"
-  }), " = ", /*#__PURE__*/React.createElement(Vec, {
-    letter: "P",
-    sub: "0"
-  }), " + ", /*#__PURE__*/React.createElement("i", null, "t"), "·", /*#__PURE__*/React.createElement(Vec, {
-    letter: "d"
-  })), /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-form",
-    style: {
-      display: "flex",
-      flexWrap: "wrap",
-      alignItems: "center",
-      columnGap: "0.3em",
-      color: COL.inhomogDark
-    }
-  }, /*#__PURE__*/React.createElement(Term, {
-    style: {
-      columnGap: "0.3em"
-    }
-  }, /*#__PURE__*/React.createElement("span", null, "="), /*#__PURE__*/React.createElement(ColVec, {
-    rows: [fmt(P0.x), fmt(P0.y)],
-    color: COL.inhomogDark
-  }), /*#__PURE__*/React.createElement("span", null, "+")), /*#__PURE__*/React.createElement(Term, null, /*#__PURE__*/React.createElement("span", null, fmtFactorAfterPlus(t)), /*#__PURE__*/React.createElement(ColVec, {
-    rows: [fmt(D.x), fmt(D.y)],
-    color: COL.inhomogDark
-  }))), /*#__PURE__*/React.createElement("div", {
-    className: "lgsls-res",
-    style: {
-      color: COL.inhomogDark
-    }
-  }, /*#__PURE__*/React.createElement(Pt, {
-    letter: "P"
-  }), fmtPair(Pi)))), /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 16,
-      background: "#F1EFE8",
-      border: `1px solid ${COL.frame}`,
+      background: "#FFF3E8",
+      border: "1px solid #F0CBA0",
       borderRadius: 10,
-      padding: "12px 14px",
-      fontSize: 14,
-      lineHeight: 1.7
+      padding: 12,
+      textAlign: "center"
     }
-  }, /*#__PURE__*/React.createElement("b", null, "Lösungen von inhomogenen LGS"), " sind von der Form „eine Lösung + alle Lösungen des homogenen LGS“. Addiert wird dabei zwischen ", /*#__PURE__*/React.createElement("b", null, "Vektoren"), ": ", /*#__PURE__*/React.createElement(Vec, {
-    letter: "P"
-  }), " = ", /*#__PURE__*/React.createElement(Vec, {
-    letter: "P",
-    sub: "0"
-  }), " + ", /*#__PURE__*/React.createElement("i", null, "t"), "·", /*#__PURE__*/React.createElement(Vec, {
-    letter: "d"
-  }), ". Egal welches t du wählst — der Verbindungsvektor vom blauen zum orangen Punkt bleibt immer derselbe, nämlich", " ", /*#__PURE__*/React.createElement(Vec, {
-    letter: "P",
-    sub: "0"
-  }), ". Setz das Häkchen bei „Zerlegung zeigen“, dann wird er eingezeichnet.")));
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: "ui-monospace, Menlo, monospace",
+      fontSize: 16,
+      fontWeight: 700,
+      color: COLOR_TANGENT
+    }
+  }, "f(x) = ", fx.toFixed(3), " ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#8A8A8A",
+      fontWeight: 400
+    }
+  }, "="), " F′(x) ≈ ", slope.toFixed(3)), nearZero && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: "#8A5A1E",
+      marginTop: 6
+    }
+  }, "Hier ist f(x) ≈ 0 → die Tangente an F ist (fast) waagrecht: F hat an dieser Stelle eine lokale Extremstelle.")), /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 14,
+      color: "#1E2430",
+      margin: "14px 2px 0 2px",
+      textAlign: "center"
+    }
+  }, "Das gilt für jedes x: ", /*#__PURE__*/React.createElement("strong", null, "F′(x) = f(x)"), " — der Hauptsatz der Differential- und Integralrechnung."), /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 13,
+      color: "#5B6472",
+      margin: "10px 2px 0 2px",
+      textAlign: "center"
+    }
+  }, "Probiere beide Beispiele und schiebe x gezielt über eine Nullstelle von f (bei Sinus: x = 0, π, 2π) — was passiert dort mit der Tangente an F?")));
 }
-ReactDOM.createRoot(document.getElementById("app-lgs-loesungsstruktur")).render(React.createElement(LgsLoesungsstruktur));  } catch (err) {
-    var mount = document.getElementById("app-lgs-loesungsstruktur");
+ReactDOM.createRoot(document.getElementById("app-hauptsatz-flaeche-steigung")).render(React.createElement(HauptsatzFlaecheSteigung));  } catch (err) {
+    var mount = document.getElementById("app-hauptsatz-flaeche-steigung");
     if (mount) {
       mount.innerHTML = '<p style="color:#9B2C2C;font-size:13px;">Fehler beim Rendern: ' +
         (err && err.message ? err.message.replace(/</g, "&lt;") : String(err)) + '</p>';
     }
-    console.error("build_preview.sh-Vorschau: Renderfehler in lgs-loesungsstruktur", err);
+    console.error("build_preview.sh-Vorschau: Renderfehler in hauptsatz-flaeche-steigung", err);
   }
 })();
 </script>
