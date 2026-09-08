@@ -637,6 +637,16 @@ function LinearkombinationVektoren() {
     try {
       e.target.setPointerCapture(e.pointerId);
     } catch (_) {}
+    // Zusaetzlich auf window mitlauschen (bubble-Phase, kein stopPropagation
+    // irgendwo im Baum): setPointerCapture ist auf aelterem WebKit/iOS bei
+    // SVG-Elementen dokumentiert unzuverlaessig (die Kapselung "gelingt"
+    // laut gotpointercapture, moved/up landen dann trotzdem nicht mehr beim
+    // Zielelement). Ohne dieses Netz verliert der Drag den Zeiger, sobald er
+    // den kleinen Hit-Kreis kurz verlaesst -- window bekommt move/up so oder
+    // so, ob die Kapselung nun wirklich greift oder nicht.
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
     updateFromEvent(e);
   }
   function onPointerMove(e) {
@@ -650,7 +660,42 @@ function LinearkombinationVektoren() {
     try {
       e.target.releasePointerCapture(e.pointerId);
     } catch (_) {}
+    window.removeEventListener("pointermove", onPointerMove);
+    window.removeEventListener("pointerup", onPointerUp);
+    window.removeEventListener("pointercancel", onPointerUp);
   }
+
+  // Zweites, unabhaengiges Sicherheitsnetz gegen das dokumentierte WebKit-
+  // Verhalten "touch-action:none wird respektiert, ABER preventDefault() auf
+  // dem synthetischen Pointer-Event allein reicht manchmal nicht, um die
+  // native Scroll-Geste zu unterdruecken" (die entscheidende Instanz ist dort
+  // das rohe TouchEvent). Ein nicht-passiver nativer touchmove-Listener direkt
+  // auf dem SVG blockt das zusaetzlich, unabhaengig vom Pointer-Events-Pfad
+  // oben. Nur touchmove noetig: touchstart selbst scrollt nirgends, erst die
+  // Bewegung tut es.
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const block = e => {
+      if (draggingRef.current) e.preventDefault();
+    };
+    svg.addEventListener("touchmove", block, {
+      passive: false
+    });
+    return () => svg.removeEventListener("touchmove", block);
+  }, []);
+
+  // Sicherheitsnetz gegen einen dauerhaft gesperrten Body-Scroll: unlock beim
+  // Unmount, falls die Komponente waehrend eines laufenden Drags verschwindet
+  // (z.B. Navigation weg von der Seite mitten im Ziehen) -- pointerup/-cancel
+  // wuerden in diesem Fall nie mehr feuern. Im Normalfall (Drag zu Ende
+  // gezogen oder abgebrochen) ist unlockBodyScroll() bereits ueber
+  // onPointerUp gelaufen; ein zweiter Aufruf hier ist dann ein No-op.
+  useEffect(() => {
+    return () => {
+      if (draggingRef.current) unlockBodyScroll();
+    };
+  }, []);
   function reset() {
     setC(cDefaultCart);
     setShowGrid(false);
@@ -680,14 +725,19 @@ function LinearkombinationVektoren() {
       minHeight: "100vh",
       padding: "20px 10px",
       color: "#1E2430",
-      boxSizing: "border-box",
-      touchAction: "none"
+      boxSizing: "border-box"
+      // KEIN touchAction:none auf diesem Wrapper: das wuerde jede
+      // Wischgeste auf der GANZEN Seite unterdruecken (nicht nur beim
+      // Ziehen) -- gemessen als Ursache dafuer, dass sich die Seite auf
+      // einem Tablet gar nicht mehr scrollen liess, obwohl der Inhalt
+      // laenger war als der sichtbare Ausschnitt. touch-action gehoert nur
+      // auf die tatsaechliche Ziehflaeche (Hit-Kreis an der c-Spitze,
+      // s.u.), nie auf umschliessende Container.
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       maxWidth: 760,
-      margin: "0 auto",
-      touchAction: "none"
+      margin: "0 auto"
     }
   }, /*#__PURE__*/React.createElement("h1", {
     style: {
@@ -716,8 +766,7 @@ function LinearkombinationVektoren() {
       background: "#FFFFFF",
       border: `1px solid ${COL.frame}`,
       borderRadius: 12,
-      padding: 6,
-      touchAction: "none"
+      padding: 6
     }
   }, /*#__PURE__*/React.createElement("svg", {
     ref: svgRef,
@@ -729,7 +778,13 @@ function LinearkombinationVektoren() {
       display: "block",
       width: "100%",
       maxWidth: "100%",
-      touchAction: "none"
+      // pan-y statt none: senkrechtes Wischen ueber der Grafik (aber
+      // ausserhalb des Hit-Kreises) scrollt die Seite weiter; ein Drag
+      // beginnt ohnehin nur auf dem Hit-Kreis (eigenes touchAction:none
+      // dort), der als Kind-Element Vorrang hat. Waagrechtes Wischen
+      // bleibt zwar theoretisch blockiert, ist hier aber irrelevant --
+      // die Seite scrollt nie horizontal.
+      touchAction: "pan-y"
     }
   }, /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement(ArrowMarker, {
     id: "mk-ab",
@@ -833,16 +888,13 @@ function LinearkombinationVektoren() {
   }), /*#__PURE__*/React.createElement("circle", {
     cx: cPx.x,
     cy: cPx.y,
-    r: "42",
+    r: "54",
     fill: "transparent",
     style: {
       cursor: "grab",
       touchAction: "none"
     },
-    onPointerDown: onPointerDown,
-    onPointerMove: onPointerMove,
-    onPointerUp: onPointerUp,
-    onPointerCancel: onPointerUp
+    onPointerDown: onPointerDown
   }))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
