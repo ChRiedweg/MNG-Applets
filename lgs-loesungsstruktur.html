@@ -407,6 +407,12 @@ function inhomogPoint(t) {
     y: P0.y + D.y * t
   };
 }
+
+// Die beiden Ergebnis-Kacheln unter den Reglern (P_h = t·d und P = P_0 + t·d,
+// je mit ausgerechneten Koordinaten) sind auf cr's Wunsch abgeschaltet
+// (2026-09-08): die Berechnung des Punktes gehoert nicht ins Applet. Der Block
+// steht vollstaendig da; Schalter auf true = unveraendert zurueck.
+const ZEIGE_ERGEBNIS_KACHELN = false;
 const T_MIN = -1;
 const T_MAX = 1;
 const T_STEP = 0.01;
@@ -1160,7 +1166,7 @@ function LgsLoesungsstruktur() {
     sub: "0"
   }), " + ", /*#__PURE__*/React.createElement("i", null, "t"), "·", /*#__PURE__*/React.createElement(Vec, {
     letter: "d"
-  }))), /*#__PURE__*/React.createElement("div", {
+  }))), ZEIGE_ERGEBNIS_KACHELN && /*#__PURE__*/React.createElement("div", {
     className: "lgsls-two",
     style: {
       marginTop: 12
