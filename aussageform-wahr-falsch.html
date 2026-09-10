@@ -598,10 +598,16 @@ function NumberLine({
   return /*#__PURE__*/React.createElement("svg", {
     ref: svgRef,
     width: "100%",
-    viewBox: `0 0 ${VBW} ${VBH}`,
+    viewBox: `0 0 ${VBW} ${VBH}`
+    // pan-y statt none: Das SVG ist zwar selbst das Drag-Ziel, aber mit rund
+    // 550 px Breite gross genug, dass touch-action:none hier das Scrollen der
+    // ganzen Seite sperrte (SCHEMA.md, Falle 4 — gemessen: scrollY blieb bei
+    // 0). Gezogen wird nur waagrecht, also gibt pan-y das senkrechte Wischen
+    // ans Scrollen zurueck, ohne dem Applet etwas zu nehmen.
+    ,
     style: {
       display: "block",
-      touchAction: "none",
+      touchAction: "pan-y",
       cursor: "pointer",
       userSelect: "none"
     },

@@ -530,7 +530,7 @@ function IntervallZahlenstrahl() {
     }), /*#__PURE__*/React.createElement("circle", {
       cx: px,
       cy: AXIS_Y,
-      r: "40",
+      r: "54",
       fill: "transparent",
       style: {
         cursor: "grab",
@@ -597,14 +597,18 @@ function IntervallZahlenstrahl() {
       minHeight: "100vh",
       padding: "20px 10px",
       color: "#1E2430",
-      boxSizing: "border-box",
-      touchAction: "none"
+      boxSizing: "border-box"
+      // KEIN touchAction:none auf diesem Wrapper (und den beiden folgenden
+      // Divs): das wuerde jede Wischgeste auf der GANZEN Seite unterdruecken,
+      // nicht nur beim Ziehen -- Falle 4 in SCHEMA.md (2026-09-08, an
+      // linearkombination-vektoren/projektion-vektoren gemessen: scrollY
+      // blieb in allen 40 geprueften Faellen bei 0 -> 0). touch-action gehoert
+      // nur auf die tatsaechliche Ziehflaeche (Hit-Kreis in Knob, s.u.).
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       maxWidth: 640,
-      margin: "0 auto",
-      touchAction: "none"
+      margin: "0 auto"
     }
   }, /*#__PURE__*/React.createElement("h1", {
     style: {
@@ -636,8 +640,7 @@ function IntervallZahlenstrahl() {
       background: "#FFFFFF",
       border: `1px solid ${COL.frame}`,
       borderRadius: 12,
-      padding: 6,
-      touchAction: "none"
+      padding: 6
     }
   }, /*#__PURE__*/React.createElement("svg", {
     ref: svgRef,
@@ -649,7 +652,12 @@ function IntervallZahlenstrahl() {
       display: "block",
       width: "100%",
       maxWidth: "100%",
-      touchAction: "none"
+      // pan-y statt none: senkrechtes Wischen ueber der Grafik (aber
+      // ausserhalb der Hit-Kreise) scrollt die Seite weiter; ein Drag
+      // beginnt ohnehin nur auf einem Hit-Kreis (eigenes
+      // touchAction:none dort, s. Knob), der als Kind-Element Vorrang
+      // hat.
+      touchAction: "pan-y"
     }
   }, /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement("marker", {
     id: "iv-arrow",
