@@ -446,8 +446,24 @@ function IntervallZahlenstrahl() {
       };
     });
   }
-  function onDown(e, which) {
+
+  // Welcher Randpunkt ist gemeint? NICHT der, dessen Hit-Kreis das Ereignis
+  // gefangen hat — die beiden Kreise ueberlappen bei kurzen Intervallen, und
+  // dann faengt der zuletzt gezeichnete (b) auch die Taps auf a. Folge: a liess
+  // sich nie mehr umschalten, von den vier Faellen [a,b] (a,b) [a,b) (a,b]
+  // blieben zwei uebrig (cr-Befund 2026-09-10, bei 40 px Abstand reproduziert).
+  // Entscheidend ist die Naehe: der Punkt, der dem Finger naeher liegt, gewinnt.
+  // Damit darf die Trefferflaeche gross bleiben, ohne den Nachbarn zu verdecken.
+  function naehererRand(e) {
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const rect = svg.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width * W;
+    return Math.abs(px - sx(iv.aVal)) <= Math.abs(px - sx(iv.bVal)) ? "a" : "b";
+  }
+  function onDown(e, whichVomElement) {
     e.preventDefault();
+    const which = naehererRand(e) || whichVomElement;
     dragRef.current = {
       which,
       moved: false,
