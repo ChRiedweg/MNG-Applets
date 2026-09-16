@@ -331,11 +331,12 @@ const {
 //  AM 3f (Ergänzungsfach), Kapitel 1.5 "Beste Lösung: überbestimmte LGS".
 //  Quelle & Notation 1:1 aus c1-mng/AM/LinAlg/T_LinAlg_3f_2026.tex (Grafik G1):
 //  Spalten w1, w2 von A, rechte Seite b, Punkt der Ebene b_E = x1*w1 + x2*w2,
-//  Fehlervektor b_E - b, Lotfusspunkt. Auftrag steht als Marker bei G1.
+//  Fehlervektor (Residuum) r = b - b_E, Lotfusspunkt. Auftrag steht als
+//  Marker bei G1.
 //
 //  Durchgerechnetes Beispiel des Skripts (Ausgleichsgerade durch (-3|0), (1|0),
 //  (2|1)):  A^T A = [[14,0],[0,3]],  A^T b = (2,1)  =>  x1 = 1/7, x2 = 1/3,
-//  b_E - b = (-2/21, 10/21, -8/21),  Q_min = 8/21 ≈ 0.381,  |b_E - b| ≈ 0.617.
+//  r = b - b_E = (2/21, -10/21, 8/21),  Q_min = 8/21 ≈ 0.381,  |r| ≈ 0.617.
 //  Alle drei Zahlen sind exakt nachgerechnet (Bruchrechnung), ebenso die
 //  Identität  Q = 14(x1 - 1/7)^2 + 3(x2 - 1/3)^2 + 8/21  (sie gilt hier so
 //  einfach, weil w1 * w2 = 0 ist) — sie trägt die Schlussaussage "kleiner geht
@@ -345,7 +346,7 @@ const {
 //  DIDAKTISCHE ARBEITSTEILUNG DER BEIDEN ANSICHTEN (bewusste Entscheidung):
 //  In JEDEM festen Schrägbild (Parallelprojektion) ist die GEZEICHNETE Länge
 //  des Fehlerpfeils kein verlässlicher Indikator. Der Grund ist strukturell:
-//  Der Normalanteil des Fehlers ist konstant (s = -0.617 für JEDE Reglerstel-
+//  Der Normalanteil des Fehlers ist konstant (s = 0.617 für JEDE Reglerstel-
 //  lung), variiert wird nur der Ebenenanteil — und dessen Bild kann den festen
 //  Vertikalanteil teilweise auslöschen. Die Bildlänge ist die Norm einer
 //  affinen Funktion von (x1, x2); ihre Niveaulinien sind Ellipsen um den
@@ -360,9 +361,9 @@ const {
 //     Fehlervektor dazwischen, rechter Winkel) — nicht das Längenargument.
 //   * Die Datenansicht (2D, unverzerrt) trägt das LÄNGEN-/Q-Argument: dort
 //     schrumpfen und wachsen die Quadrate wirklichkeitsgetreu.
-//   * Die Zahl |b_E - b| bzw. Q läuft in beiden Ansichten mit und ist die
-//     verbindliche Grösse; "senkrecht" wird über die beiden Skalarprodukte
-//     w_i * (b_E - b) angezeigt, nicht über den Augenschein.
+//   * Die Zahl |r| (= |b - b_E|) bzw. Q läuft in beiden Ansichten mit und ist
+//     die verbindliche Grösse; "senkrecht" wird über die beiden Skalarprodukte
+//     w_i * r angezeigt, nicht über den Augenschein.
 //  ---------------------------------------------------------------------------
 //  BENENNUNG DER BEIDEN ZAHLEN (Aenderungswunsch cr, 2026-09-01):
 //  Schritt 1 spricht von der Geraden y = m*x + q und nennt die beiden Regler
@@ -408,7 +409,7 @@ const {
 //   * KLAMMERN: Matrizen eckig (mit Haekchen oben und unten, siehe der Kasten
 //     mit [ A^T A | A^T b ]), Vektoren rund (VecParen). Zwei blosse senkrechte
 //     Striche werden fuer Zahlenvektoren NICHT verwendet — sie lesen sich als
-//     Betrag, und der Betrag |b_E − b| steht in derselben Kette wirklich da.
+//     Betrag, und der Betrag |b − b_E| steht in derselben Kette wirklich da.
 //   * HOCHGESTELLTES T: Jeder SPALTENVEKTOR, der aus Platzgruenden als Zeilen-
 //     tupel gesetzt ist, bekommt ein hochgestelltes T — im Applet betrifft das
 //     die Fusszeile (w1, w2, b), die in ALLEN drei Schritten steht (sie liegt
@@ -439,6 +440,48 @@ const {
 //  sichtbar. Der Statustext unter den beiden DotGauge in Schritt 3 ist davon
 //  unabhaengig dauerhaft (nicht hinter dem Schalter) auf je einen Satz gekuerzt
 //  worden: er ist Rueckmeldung auf die Reglerbewegung, kein Erklaertext.
+//  ---------------------------------------------------------------------------
+//  FEHLERVEKTOR EIN-/AUSBLENDBAR IN SCHRITT 2 (cr, 2026-09-16):
+//  Schalter showResid (Default true — der bisherige Anblick bleibt also
+//  unveraendert, bis jemand ihn umlegt) blendet in der Raumansicht von
+//  Schritt 2 NUR den roten Fehlervektor r = b - b_E samt seiner Laengen-
+//  beschriftung aus; Punkt b_E, Ebene und b bleiben stehen — das Bild ist so
+//  auch ohne den Vektor zeigbar (Struktur b / Ebene / b_E allein). Das rechte
+//  Winkelzeichen haengt am Vektor (showPerp/isPerp oben): es wird in SpaceView
+//  an dieselbe Bedingung gekoppelt (showPerp && showResid), sonst markierte es
+//  einen Winkel zu einem unsichtbaren Vektor. Q, die Laengenkette und die
+//  beiden Skalarprodukt-Anzeigen laufen unveraendert unabhaengig von der
+//  Sichtbarkeit weiter — der Schalter betrifft nur die Zeichnung in der
+//  Raumansicht. Schritt 3 (SpaceView mit showPerp=true) ist nicht betroffen:
+//  showResid ist dort per Default true, kein eigener Schalter. Das aria-label
+//  von SpaceView ist ebenfalls an showResid gekoppelt (Nachtrag cr,
+//  2026-09-16): ohne den Vektor nennt es nur noch, was tatsächlich zu sehen
+//  ist (Ursprung, Ebene, b_E, die Zerlegung x1 w1 / x2 w2, b) statt weiterhin
+//  einen unsichtbaren Fehlervektor zu behaupten.
+//  ---------------------------------------------------------------------------
+//  RICHTUNG DES RESIDUUMS AUF SKRIPT-KONVENTION GEDREHT (cr, 2026-09-16):
+//  Bis hierhin rechnete und beschriftete das Applet den Fehlervektor als
+//  b_E - b (Modellwert minus Messwert). Das Theorieskript definiert ihn
+//  umgekehrt: "Den Fehlervektor $\vec r\defl\vec b-\vec b_E$ bezeichnet man
+//  als Residuum. Seine Komponenten sind gerade die drei Abweichungen von
+//  oben, und $Q=|\vec r|^2$ ist das Quadrat der Länge von $\vec r$."
+//  (T_LinAlg_3f_2026.tex:1385). Die Skriptgrafik G1 zeichnet den Pfeil
+//  ausdruecklich so: "Residuum r = b - b_E : vom Endpunkt von b_E zum
+//  Endpunkt von b" (ebd., Kommentar Zeile 1422). Betroffen: resid[] in der
+//  Hauptkomponente (jetzt Messwert - Modellwert), die errVec/d1/d2-Kette samt
+//  den beiden Skalarprodukt-Ausdruecken 2 - 14x1 bzw. 1 - 3x2, der gezeichnete
+//  Pfeil in SpaceView (zeigt neu von der Spitze von b_E zur Spitze von b), die
+//  Kette in Schritt 2 und die Fusszeilen-Konvention. UNVERAENDERT bleiben Q
+//  (quadriert, vorzeichenunabhaengig), die Laenge |r|, die Rastlogik (rastet
+//  auf |d_i| < EXACT, also betragsbasiert) und die Position von Hilfsgerade
+//  und Rechtwinkel-Haekchen (der rechte Winkel gilt in beiden Richtungen).
+//  Nachtrag (cr, 2026-09-16): Der "Warum genau hier?"-Absatz in Schritt 3
+//  (nur sichtbar bei SCHLANK = false) rechnete die Orthogonalitaetsbedingung
+//  noch in der alten Richtung vor (w_i * (x1w1+x2w2-b) = 0); jetzt steht dort
+//  w_i * (b-x1w1-x2w2) = 0 — die ausfuehrliche Fassung erzaehlt damit
+//  dieselbe Richtung wie oben. Die Herleitung selbst (Normalgleichungen-
+//  Matrix, Loesung, Q-Identitaet) ist vorzeichenunabhaengig und blieb
+//  unveraendert.
 //  ---------------------------------------------------------------------------
 // =============================================================================
 
@@ -497,7 +540,7 @@ const SNAP = 2 * STEP;
 const EXACT = 1e-9;
 const Q_MAX_BAR = 7.4; // grösstes im Reglerbereich erreichbares Q (nachgerechnet: 7.30)
 // Laengen-Balken und Q-Balken werden in Schritt 2 gleich breit gezeichnet, mit
-// Skalenende |b_E - b| = 2.72 oben und Q = 2.72^2 = 7.4 unten. Dadurch ist die
+// Skalenende |b - b_E| = 2.72 oben und Q = 2.72^2 = 7.4 unten. Dadurch ist die
 // Fuellung des Q-Balkens EXAKT das Quadrat der Fuellung des Laengenbalkens
 // (Q/7.4 = (len/2.72)^2) — genau die Aussage Q = Laenge^2, als Bild.
 const LEN_MAX_BAR = Math.sqrt(Q_MAX_BAR); // = 2.7203
@@ -727,7 +770,7 @@ function VecSym({
 // Eine RUNDE Klammer, die mit der Hoehe ihres Inhalts mitwaechst — fuer
 // Zahlenvektoren (Spaltenvektoren). Frueher standen dort zwei blosse senkrechte
 // Striche; die lesen sich als Betrag, ausgerechnet zwei Zeilen ueber dem echten
-// Betrag |b_E − b| derselben Kette (cr 2026-09-03). Konvention im Applet:
+// Betrag |b − b_E| derselben Kette (cr 2026-09-03). Konvention im Applet:
 // Matrizen eckig (mit Haekchen oben und unten), Vektoren rund.
 // Technik: SVG mit preserveAspectRatio="none" wird vertikal auf die Inhaltshoehe
 // gezogen (viewBox-Hoehe 100 -> Boxhoehe), horizontal 1:1 (viewBox-Breite 10 ->
@@ -848,7 +891,8 @@ function SpaceView({
   x2,
   len,
   showPerp,
-  isPerp
+  isPerp,
+  showResid = true
 }) {
   const O = proj3([0, 0, 0]);
   const bP = proj3(BV);
@@ -901,7 +945,7 @@ function SpaceView({
   return /*#__PURE__*/React.createElement("svg", {
     viewBox: `0 0 ${SP.W} ${Math.round(SP.H)}`,
     role: "img",
-    "aria-label": "Schrägbild: Ebene aller x1 w1 + x2 w2, der Vektor b darüber und der Fehlervektor dazwischen",
+    "aria-label": showResid ? "Schrägbild: Ebene aller x1 w1 + x2 w2, der Vektor b darüber und der Fehlervektor dazwischen" : "Schrägbild: Ursprung, Ebene aller x1 w1 + x2 w2 mit dem Punkt b_E, die Zerlegung von b_E in x1 w1 (orange) und x2 w2 (grün), sowie der Vektor b darüber",
     style: {
       display: "block",
       width: "100%",
@@ -998,7 +1042,7 @@ function SpaceView({
     stroke: COL.x2,
     strokeWidth: "3",
     markerEnd: "url(#sp-x2)"
-  }), showPerp && /*#__PURE__*/React.createElement("line", {
+  }), showPerp && showResid && /*#__PURE__*/React.createElement("line", {
     x1: e.x - helpHalf,
     y1: e.y,
     x2: e.x + helpHalf,
@@ -1006,7 +1050,7 @@ function SpaceView({
     stroke: COL.faint,
     strokeWidth: "1",
     strokeDasharray: "3 3"
-  }), showPerp && isPerp && /*#__PURE__*/React.createElement("path", {
+  }), showPerp && showResid && isPerp && /*#__PURE__*/React.createElement("path", {
     d: `M ${e.x + rw} ${e.y} L ${e.x + rw} ${e.y - rw} L ${e.x} ${e.y - rw}`,
     fill: "none",
     stroke: COL.err,
@@ -1034,19 +1078,19 @@ function SpaceView({
     color: COL.b,
     size: 16,
     weight: 700
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: b.x,
-    y1: b.y,
-    x2: e.x,
-    y2: e.y,
+  }), showResid && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("line", {
+    x1: e.x,
+    y1: e.y,
+    x2: b.x,
+    y2: b.y,
     stroke: "#FFFFFF",
     strokeWidth: "6.5",
     strokeOpacity: "0.8"
   }), /*#__PURE__*/React.createElement("line", {
-    x1: b.x,
-    y1: b.y,
-    x2: e.x,
-    y2: e.y,
+    x1: e.x,
+    y1: e.y,
+    x2: b.x,
+    y2: b.y,
     stroke: COL.err,
     strokeWidth: "3",
     markerEnd: "url(#sp-e)"
@@ -1060,7 +1104,7 @@ function SpaceView({
     paintOrder: "stroke",
     fontFamily: "ui-monospace, Menlo, monospace",
     fontWeight: "700"
-  }, num(len)), /*#__PURE__*/React.createElement("circle", {
+  }, num(len))), /*#__PURE__*/React.createElement("circle", {
     cx: e.x,
     cy: e.y,
     r: "4.5",
@@ -1668,17 +1712,19 @@ function NormalgleichungenBesteLoesung() {
   const [showWrong, setShowWrong] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [showData3, setShowData3] = useState(true);
+  const [showResid, setShowResid] = useState(true);
 
-  // Fehlervektor b_E - b = A*x - b; seine Komponenten sind genau die drei
-  // Abweichungen der Datenansicht (x1*x_i + x2 - y_i).
-  const resid = useMemo(() => PTS.map(p => x1 * p.x + x2 - p.y), [x1, x2]);
+  // Residuum r = b - b_E = b - A*x (Skript-Konvention, T_LinAlg_3f_2026.tex:1385);
+  // seine Komponenten sind genau die drei Abweichungen der Datenansicht
+  // (y_i - (x1*x_i + x2)).
+  const resid = useMemo(() => PTS.map(p => p.y - (x1 * p.x + x2)), [x1, x2]);
   const Q = useMemo(() => resid.reduce((a, r) => a + r * r, 0), [resid]);
   const len = Math.sqrt(Q);
 
-  // Skalarprodukte des Fehlervektors mit den Spalten — das sind (nachgerechnet)
-  // genau die linken Seiten der Normalgleichungen minus deren rechte Seiten:
-  //   w1 * (b_E - b) = 14*x1 - 2 ,  w2 * (b_E - b) = 3*x2 - 1
-  const errVec = useMemo(() => [x1 * W1[0] + x2 * W2[0] - BV[0], x1 * W1[1] + x2 * W2[1] - BV[1], x1 * W1[2] + x2 * W2[2] - BV[2]], [x1, x2]);
+  // Skalarprodukte des Residuums mit den Spalten — das sind (nachgerechnet)
+  // genau die rechten Seiten der Normalgleichungen minus deren linke Seiten:
+  //   w1 * (b - b_E) = 2 - 14*x1 ,  w2 * (b - b_E) = 1 - 3*x2
+  const errVec = useMemo(() => [BV[0] - (x1 * W1[0] + x2 * W2[0]), BV[1] - (x1 * W1[1] + x2 * W2[1]), BV[2] - (x1 * W1[2] + x2 * W2[2])], [x1, x2]);
   const d1 = dot3(W1, errVec);
   const d2 = dot3(W2, errVec);
   // Rekordmarke erst anzeigen, wenn wirklich selbst probiert wurde.
@@ -1973,7 +2019,7 @@ function NormalgleichungenBesteLoesung() {
     }
   }), "Abstand zur Geraden vergleichen")), !SCHLANK && /*#__PURE__*/React.createElement("p", {
     style: noteStyle
-  }, "Gemessen wird ", /*#__PURE__*/React.createElement("strong", null, "in y-Richtung"), ": Abweichung = Geradenwert − Messwert. Die grau gestrichelten Strecken zeigen zum Vergleich den Abstand ", /*#__PURE__*/React.createElement("em", null, "senkrecht zur Geraden"), " ", "— eine andere Grösse, die hier ausdrücklich ", /*#__PURE__*/React.createElement("em", null, "nicht"), " gemeint ist. Q addiert die Quadrate der roten Strecken: deren Flächen sehen Sie im Bild."), /*#__PURE__*/React.createElement("p", {
+  }, "Gemessen wird ", /*#__PURE__*/React.createElement("strong", null, "in y-Richtung"), ": Abweichung = Messwert − Geradenwert. Die grau gestrichelten Strecken zeigen zum Vergleich den Abstand ", /*#__PURE__*/React.createElement("em", null, "senkrecht zur Geraden"), " ", "— eine andere Grösse, die hier ausdrücklich ", /*#__PURE__*/React.createElement("em", null, "nicht"), " gemeint ist. Q addiert die Quadrate der roten Strecken: deren Flächen sehen Sie im Bild."), /*#__PURE__*/React.createElement("p", {
     style: {
       ...noteStyle,
       color: COL.ink,
@@ -2015,13 +2061,15 @@ function NormalgleichungenBesteLoesung() {
     l: "b",
     color: COL.bd,
     weight: 700
-  }), " liegt ", /*#__PURE__*/React.createElement("em", null, "nicht"), " ", "in dieser Ebene — sonst wäre das LGS ja lösbar. Der rote Pfeil ist der Fehlervektor", " ", /*#__PURE__*/React.createElement(VecSym, {
-    l: "b",
-    sub: "E"
-  }), " − ", /*#__PURE__*/React.createElement(VecSym, {
+  }), " liegt ", /*#__PURE__*/React.createElement("em", null, "nicht"), " ", "in dieser Ebene — sonst wäre das LGS ja lösbar. Der rote Pfeil ist das Residuum", " ", /*#__PURE__*/React.createElement(VecSym, {
+    l: "r"
+  }), " = ", /*#__PURE__*/React.createElement(VecSym, {
     l: "b",
     color: COL.bd,
     weight: 700
+  }), " −", " ", /*#__PURE__*/React.createElement(VecSym, {
+    l: "b",
+    sub: "E"
   }), "."), /*#__PURE__*/React.createElement("div", {
     style: card
   }, /*#__PURE__*/React.createElement(SpaceView, {
@@ -2029,7 +2077,8 @@ function NormalgleichungenBesteLoesung() {
     x2: x2,
     len: len,
     showPerp: false,
-    isPerp: isPerp
+    isPerp: isPerp,
+    showResid: showResid
   })), !SCHLANK && /*#__PURE__*/React.createElement("p", {
     style: {
       ...noteStyle,
@@ -2043,7 +2092,33 @@ function NormalgleichungenBesteLoesung() {
     l: "w",
     sub: "2",
     color: COL.x2d
-  }), "."), params("x"), ZEIGE_QUADRAT_KASTEN && /*#__PURE__*/React.createElement("div", {
+  }), "."), params("x"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 14,
+      alignItems: "center",
+      marginTop: 4
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      fontSize: 14,
+      display: "flex",
+      alignItems: "center",
+      gap: 7,
+      cursor: "pointer",
+      minHeight: 44
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: showResid,
+    onChange: ev => setShowResid(ev.target.checked),
+    style: {
+      width: 20,
+      height: 20,
+      flexShrink: 0
+    }
+  }), "Fehlervektor zeichnen")), ZEIGE_QUADRAT_KASTEN && /*#__PURE__*/React.createElement("div", {
     style: {
       ...boxStyle,
       padding: "12px 14px 8px 14px"
@@ -2092,7 +2167,7 @@ function NormalgleichungenBesteLoesung() {
       marginBottom: 10,
       lineHeight: 1.5
     }
-  }, "Vom Fehlervektor zur Zahl Q — in zwei Schritten. Die drei Koordinaten des Fehlervektors ", /*#__PURE__*/React.createElement("em", null, "sind"), " die drei Abweichungen aus Schritt 1:"), /*#__PURE__*/React.createElement("div", {
+  }, "Vom Residuum zur Zahl Q — in zwei Schritten. Die drei Koordinaten des Residuums ", /*#__PURE__*/React.createElement("em", null, "sind"), " die drei Abweichungen aus Schritt 1:"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       alignItems: "center",
@@ -2104,12 +2179,14 @@ function NormalgleichungenBesteLoesung() {
       fontSize: 15
     }
   }, /*#__PURE__*/React.createElement(VecSym, {
-    l: "b",
-    sub: "E"
-  }), " − ", /*#__PURE__*/React.createElement(VecSym, {
+    l: "r"
+  }), " = ", /*#__PURE__*/React.createElement(VecSym, {
     l: "b",
     color: COL.bd,
     weight: 700
+  }), " −", " ", /*#__PURE__*/React.createElement(VecSym, {
+    l: "b",
+    sub: "E"
   }), " ="), /*#__PURE__*/React.createElement("span", {
     style: {
       position: "relative",
@@ -2133,7 +2210,7 @@ function NormalgleichungenBesteLoesung() {
       color: COL.muted,
       maxWidth: 320
     }
-  }, "Eine Zeile des LGS ⇔ ein Messpunkt ⇔ eine Koordinate des Fehlervektors.")), /*#__PURE__*/React.createElement(ChainArrow, {
+  }, "Eine Zeile des LGS ⇔ ein Messpunkt ⇔ eine Koordinate des Residuums.")), /*#__PURE__*/React.createElement(ChainArrow, {
     label: "Länge dieses Vektors"
   }), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -2141,12 +2218,7 @@ function NormalgleichungenBesteLoesung() {
       color: COL.ink
     }
   }, "|", /*#__PURE__*/React.createElement(VecSym, {
-    l: "b",
-    sub: "E"
-  }), " − ", /*#__PURE__*/React.createElement(VecSym, {
-    l: "b",
-    color: COL.bd,
-    weight: 700
+    l: "r"
   }), "| =", " ", /*#__PURE__*/React.createElement("span", {
     style: {
       fontFamily: "ui-monospace, Menlo, monospace",
@@ -2162,12 +2234,7 @@ function NormalgleichungenBesteLoesung() {
       color: COL.ink
     }
   }, "Q = |", /*#__PURE__*/React.createElement(VecSym, {
-    l: "b",
-    sub: "E"
-  }), " − ", /*#__PURE__*/React.createElement(VecSym, {
-    l: "b",
-    color: COL.bd,
-    weight: 700
+    l: "r"
   }), "|² =", " ", /*#__PURE__*/React.createElement("span", {
     style: {
       fontFamily: "ui-monospace, Menlo, monospace",
@@ -2218,26 +2285,20 @@ function NormalgleichungenBesteLoesung() {
       l: "w",
       sub: "1",
       color: COL.x1d
-    }), " · (", /*#__PURE__*/React.createElement(VecSym, {
-      l: "b",
-      sub: "E"
-    }), " −", " ", /*#__PURE__*/React.createElement(VecSym, {
-      l: "b"
-    }), ")"),
-    expr: "14·x₁ − 2",
+    }), " · ", /*#__PURE__*/React.createElement(VecSym, {
+      l: "r"
+    })),
+    expr: "2 − 14·x₁",
     value: d1
   }), /*#__PURE__*/React.createElement(DotGauge, {
     term: /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(VecSym, {
       l: "w",
       sub: "2",
       color: COL.x2d
-    }), " · (", /*#__PURE__*/React.createElement(VecSym, {
-      l: "b",
-      sub: "E"
-    }), " −", " ", /*#__PURE__*/React.createElement(VecSym, {
-      l: "b"
-    }), ")"),
-    expr: "3·x₂ − 1",
+    }), " · ", /*#__PURE__*/React.createElement(VecSym, {
+      l: "r"
+    })),
+    expr: "1 − 3·x₂",
     value: d2
   }), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -2340,14 +2401,14 @@ function NormalgleichungenBesteLoesung() {
   }, "«Senkrecht auf beiden Spalten» heisst ausgeschrieben", " ", /*#__PURE__*/React.createElement(VecSym, {
     l: "w",
     sub: "1"
-  }), " · (x₁", /*#__PURE__*/React.createElement(VecSym, {
+  }), " · (", /*#__PURE__*/React.createElement(VecSym, {
+    l: "b"
+  }), " − x₁", /*#__PURE__*/React.createElement(VecSym, {
     l: "w",
     sub: "1"
-  }), " + x₂", /*#__PURE__*/React.createElement(VecSym, {
+  }), " − x₂", /*#__PURE__*/React.createElement(VecSym, {
     l: "w",
     sub: "2"
-  }), " −", " ", /*#__PURE__*/React.createElement(VecSym, {
-    l: "b"
   }), ") = 0 und dasselbe mit ", /*#__PURE__*/React.createElement(VecSym, {
     l: "w",
     sub: "2"
@@ -2463,14 +2524,19 @@ function NormalgleichungenBesteLoesung() {
     sub: "2"
   }), " = (1 | 1 | 1)", /*#__PURE__*/React.createElement("sup", null, "T"), ", ", /*#__PURE__*/React.createElement(VecSym, {
     l: "b"
-  }), " = (0 | 0 | 1)", /*#__PURE__*/React.createElement("sup", null, "T"), " — die drei Zeilen sind die drei Messpunkte (−3|0), (1|0), (2|1).", !SCHLANK && /*#__PURE__*/React.createElement(React.Fragment, null, " ", "Das Vorzeichen des Fehlervektors ist Konvention: ", /*#__PURE__*/React.createElement(VecSym, {
+  }), " = (0 | 0 | 1)", /*#__PURE__*/React.createElement("sup", null, "T"), " — die drei Zeilen sind die drei Messpunkte (−3|0), (1|0), (2|1).", !SCHLANK && /*#__PURE__*/React.createElement(React.Fragment, null, " ", "Konvention (wie im Theorieskript): das Residuum ", /*#__PURE__*/React.createElement(VecSym, {
+    l: "r"
+  }), " =", " ", /*#__PURE__*/React.createElement(VecSym, {
     l: "b"
   }), " − ", /*#__PURE__*/React.createElement(VecSym, {
     l: "b",
     sub: "E"
-  }), " (in den Aufgaben ", /*#__PURE__*/React.createElement(VecSym, {
-    l: "r"
-  }), ", das «Residuum») ist derselbe Vektor in umgekehrter Richtung und genau gleich lang."))));
+  }), ". Manche Darstellungen nehmen stattdessen", " ", /*#__PURE__*/React.createElement(VecSym, {
+    l: "b",
+    sub: "E"
+  }), " − ", /*#__PURE__*/React.createElement(VecSym, {
+    l: "b"
+  }), " — derselbe Vektor in umgekehrter Richtung und genau gleich lang."))));
 }
 ReactDOM.createRoot(document.getElementById("app-normalgleichungen-beste-loesung")).render(React.createElement(NormalgleichungenBesteLoesung));  } catch (err) {
     var mount = document.getElementById("app-normalgleichungen-beste-loesung");
